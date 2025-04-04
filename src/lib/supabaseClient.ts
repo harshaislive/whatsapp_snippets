@@ -5,11 +5,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Basic validation
-if (!supabaseUrl) {
-  throw new Error("VITE_SUPABASE_URL is not defined in .env file");
-}
-if (!supabaseAnonKey) {
-  throw new Error("VITE_SUPABASE_ANON_KEY is not defined in .env file");
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
 }
 
 // Create and export the Supabase client instance
