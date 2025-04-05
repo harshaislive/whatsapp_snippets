@@ -76,8 +76,8 @@
     errorMessage = null;
 
     const currentOffset = loadMore ? snippets.length : 0;
-    console.log(`Fetching snippets trigger: loadMore=${loadMore}, offset=${currentOffset}`);
-    console.log(`>>> fetchSnippets using dates: start=${startDate}, end=${endDate}`);
+    console.log(`[DEBUG] fetchSnippets called with filter: ${activeQuickFilter}`);
+    console.log(`[DEBUG] Date range: ${startDate || 'none'} to ${endDate || 'none'}`);
 
     try {
       let query = supabase
@@ -86,39 +86,43 @@
         .order('timestamp', { ascending: false })
         .range(currentOffset, currentOffset + snippetsPerPage - 1);
 
-      // Apply date filters if set
-      if (startDate) {
-        // Add time to start date to include the entire day
-        query = query.gte('timestamp', `${startDate}T00:00:00.000Z`);
+      // Only apply date filters if NOT in 'All Time' mode
+      if (activeQuickFilter !== 'All Time') {
+        console.log('[DEBUG] Applying date filters to query');
+        if (startDate) {
+          query = query.gte('timestamp', `${startDate}T00:00:00.000Z`);
+        }
+        if (endDate) {
+          query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
+        }
+      } else {
+        console.log('[DEBUG] All Time filter selected - no date filters applied');
       }
-      if (endDate) {
-        // Add time to end date to include the entire day
-        query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
-      }
-      
-      // Apply group filter in database query if enabled
+
+      // Apply group filter if enabled
       if (showGroupMessagesOnly) {
         query = query.eq('is_group', true);
       }
 
-      const { data, error, count } = await query.returns<Snippet[]>();
+      const { data, error, count } = await query;
 
       if (error) {
         throw error;
       }
 
+      console.log(`[DEBUG] Query returned ${data?.length || 0} snippets`);
+      
       const fetchedSnippets = data || [];
-      console.log(`Fetched ${fetchedSnippets.length} snippets. Total count: ${count}`);
 
       if (loadMore) {
         snippets = [...snippets, ...fetchedSnippets];
       } else {
         snippets = fetchedSnippets;
       }
-      
+
       if (count === null || snippets.length >= count) {
-          console.log("No more snippets to load.");
-          canLoadMore = false;
+        console.log("[DEBUG] No more snippets to load");
+        canLoadMore = false;
       }
 
     } catch (error: any) {
@@ -370,6 +374,7 @@
   // --- Reactive Statements ---
   // Update date filters based on active quick filter AND trigger fetch
   $: {
+    console.log(`[DEBUG] Quick filter changed to: ${activeQuickFilter}`);
     let newStartDate: string | null = null;
     let newEndDate: string | null = null;
     const today = new Date();
@@ -385,16 +390,15 @@
       newEndDate = newStartDate;
     } else if (activeQuickFilter === 'Last 7 Days') {
       const start = new Date(today);
-      start.setDate(today.getDate() - 6); // -6 because we want to include today
+      start.setDate(today.getDate() - 6);
       newStartDate = start.toISOString().split('T')[0];
       newEndDate = todayStr;
     } else if (activeQuickFilter === 'Last 30 Days') {
       const start = new Date(today);
-      start.setDate(today.getDate() - 29); // -29 because we want to include today
+      start.setDate(today.getDate() - 29);
       newStartDate = start.toISOString().split('T')[0];
       newEndDate = todayStr;
     } else if (activeQuickFilter === 'Custom Range') {
-      // Keep manually set dates if custom range is selected
       newStartDate = startDate;
       newEndDate = endDate;
     } else { // 'All Time' or default
@@ -402,19 +406,19 @@
       newEndDate = null;
     }
 
-    // Only update and fetch if dates actually changed OR if filter is Custom Range (handled separately)
-    if (newStartDate !== startDate || newEndDate !== endDate) {
-      console.log(`Quick filter applied: ${activeQuickFilter}. Setting range: ${newStartDate} to ${newEndDate}`);
-      startDate = newStartDate;
-      endDate = newEndDate;
-      // Refetch the first page if the initial load is complete
-      if (initialLoadComplete && activeQuickFilter !== 'Custom Range') {
-         console.log("Date filters changed via quick filter, refetching first page...");
-         fetchSnippets(false); // Fetch the first page
-      } else if (initialLoadComplete && activeQuickFilter === 'Custom Range' && (startDate || endDate)) {
-         // Handle fetch for custom range if dates are set
-         console.log("Custom range dates set, refetching first page...");
-         fetchSnippets(false);
+    // Always trigger a fetch when the filter changes, even if dates haven't changed
+    // This ensures 'All Time' works even when dates are already null
+    if (initialLoadComplete) {
+      if (activeQuickFilter === 'All Time') {
+        console.log('[DEBUG] All Time filter selected, fetching all snippets');
+        startDate = null;
+        endDate = null;
+        fetchSnippets(false);
+      } else if (newStartDate !== startDate || newEndDate !== endDate) {
+        console.log(`[DEBUG] Setting date range: ${newStartDate} to ${newEndDate}`);
+        startDate = newStartDate;
+        endDate = newEndDate;
+        fetchSnippets(false);
       }
     }
   }
