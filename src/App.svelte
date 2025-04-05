@@ -77,7 +77,6 @@
 
     const currentOffset = loadMore ? snippets.length : 0;
     console.log(`[DEBUG] fetchSnippets called with filter: ${activeQuickFilter}`);
-    console.log(`[DEBUG] Date range: ${startDate || 'none'} to ${endDate || 'none'}`);
 
     try {
       let query = supabase
@@ -86,24 +85,64 @@
         .order('timestamp', { ascending: false })
         .range(currentOffset, currentOffset + snippetsPerPage - 1);
 
-      // Only apply date filters if NOT in 'All Time' mode
-      if (activeQuickFilter !== 'All Time') {
-        console.log('[DEBUG] Applying date filters to query');
-        if (startDate) {
-          query = query.gte('timestamp', `${startDate}T00:00:00.000Z`);
-        }
-        if (endDate) {
-          query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
-        }
-      } else {
-        console.log('[DEBUG] All Time filter selected - no date filters applied');
-      }
-
       // Apply group filter if enabled
       if (showGroupMessagesOnly) {
         query = query.eq('is_group', true);
       }
 
+      // Apply date filters based on activeQuickFilter
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      switch (activeQuickFilter) {
+        case 'Today':
+          const todayStr = today.toISOString().split('T')[0];
+          query = query
+            .gte('timestamp', `${todayStr}T00:00:00.000Z`)
+            .lte('timestamp', `${todayStr}T23:59:59.999Z`);
+          break;
+          
+        case 'Yesterday':
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          query = query
+            .gte('timestamp', `${yesterdayStr}T00:00:00.000Z`)
+            .lte('timestamp', `${yesterdayStr}T23:59:59.999Z`);
+          break;
+          
+        case 'Last 7 Days':
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(today.getDate() - 6);
+          query = query
+            .gte('timestamp', `${sevenDaysAgo.toISOString().split('T')[0]}T00:00:00.000Z`)
+            .lte('timestamp', `${today.toISOString().split('T')[0]}T23:59:59.999Z`);
+          break;
+          
+        case 'Last 30 Days':
+          const thirtyDaysAgo = new Date(today);
+          thirtyDaysAgo.setDate(today.getDate() - 29);
+          query = query
+            .gte('timestamp', `${thirtyDaysAgo.toISOString().split('T')[0]}T00:00:00.000Z`)
+            .lte('timestamp', `${today.toISOString().split('T')[0]}T23:59:59.999Z`);
+          break;
+          
+        case 'Custom Range':
+          if (startDate) {
+            query = query.gte('timestamp', `${startDate}T00:00:00.000Z`);
+          }
+          if (endDate) {
+            query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
+          }
+          break;
+          
+        case 'All Time':
+        default:
+          // No date filters for 'All Time'
+          break;
+      }
+
+      console.log('[DEBUG] Executing query with filter:', activeQuickFilter);
       const { data, error, count } = await query;
 
       if (error) {
@@ -274,47 +313,56 @@
 
   // Moved grouping logic into its own reactive block
   $: {
-    console.log(`Grouping logic triggered. activeQuickFilter: ${activeQuickFilter}`);
-    console.log(`Grouping ${filteredSnippets.length} filtered snippets.`);
+    console.log(`[DEBUG] Grouping logic triggered. Filter: ${activeQuickFilter}, Snippets: ${filteredSnippets.length}`);
 
     if (activeQuickFilter === 'All Time') {
-      console.log("--> Grouping for 'All Time' filter.");
-      // For 'All Time', use a single group with a special key containing all filtered snippets
-      groupedSnippets = { '__ALL__': filteredSnippets }; 
-      sortedGroupLabels = ['__ALL__'];
-    } else {
-      console.log("--> Grouping by date label.");
-      // For other filters, use the daily grouping logic
-      const groups = filteredSnippets.reduce((groups, snippet) => {
-        try {
-          const snippetDate = new Date(snippet.timestamp);
-          const label = getRelativeDateLabel(snippetDate);
-          if (!groups[label]) {
-            groups[label] = [];
-          }
-          groups[label].push(snippet);
-        } catch (e) {
-          console.error("Error parsing date for grouping:", snippet.timestamp, e);
+      // For 'All Time', use chronological grouping by month
+      const groups = filteredSnippets.reduce((acc, snippet) => {
+        const date = new Date(snippet.timestamp);
+        const monthLabel = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        
+        if (!acc[monthLabel]) {
+          acc[monthLabel] = [];
         }
-        return groups;
+        acc[monthLabel].push(snippet);
+        return acc;
       }, {} as Record<string, Snippet[]>);
       
       groupedSnippets = groups;
-
-      // Sort the daily labels
-      sortedGroupLabels = Object.keys(groupedSnippets).sort((a, b) => {
-          if (a === 'Today') return -1;
-          if (b === 'Today') return 1;
-          if (a === 'Yesterday') return -1;
-          if (b === 'Yesterday') return 1;
-          // Sort older dates chronologically descending
-          try {
-              return new Date(b).getTime() - new Date(a).getTime();
-          } catch (e) {
-              return 0; // Fallback if date parsing fails
-          }
+      sortedGroupLabels = Object.keys(groups).sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateB.getTime() - dateA.getTime();
+      });
+    } else {
+      // For other filters, use daily grouping
+      const groups = filteredSnippets.reduce((acc, snippet) => {
+        const snippetDate = new Date(snippet.timestamp);
+        const label = getRelativeDateLabel(snippetDate);
+        
+        if (!acc[label]) {
+          acc[label] = [];
+        }
+        acc[label].push(snippet);
+        return acc;
+      }, {} as Record<string, Snippet[]>);
+      
+      groupedSnippets = groups;
+      sortedGroupLabels = Object.keys(groups).sort((a, b) => {
+        if (a === 'Today') return -1;
+        if (b === 'Today') return 1;
+        if (a === 'Yesterday') return -1;
+        if (b === 'Yesterday') return 1;
+        
+        try {
+          return new Date(b).getTime() - new Date(a).getTime();
+        } catch (e) {
+          return 0;
+        }
       });
     }
+    
+    console.log(`[DEBUG] Grouped into ${sortedGroupLabels.length} groups:`, sortedGroupLabels);
   }
   
   // --- Dark Mode Logic ---
@@ -372,55 +420,10 @@
   });
 
   // --- Reactive Statements ---
-  // Update date filters based on active quick filter AND trigger fetch
-  $: {
-    console.log(`[DEBUG] Quick filter changed to: ${activeQuickFilter}`);
-    let newStartDate: string | null = null;
-    let newEndDate: string | null = null;
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-
-    if (activeQuickFilter === 'Today') {
-      newStartDate = todayStr;
-      newEndDate = todayStr;
-    } else if (activeQuickFilter === 'Yesterday') {
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      newStartDate = yesterday.toISOString().split('T')[0];
-      newEndDate = newStartDate;
-    } else if (activeQuickFilter === 'Last 7 Days') {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 6);
-      newStartDate = start.toISOString().split('T')[0];
-      newEndDate = todayStr;
-    } else if (activeQuickFilter === 'Last 30 Days') {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 29);
-      newStartDate = start.toISOString().split('T')[0];
-      newEndDate = todayStr;
-    } else if (activeQuickFilter === 'Custom Range') {
-      newStartDate = startDate;
-      newEndDate = endDate;
-    } else { // 'All Time' or default
-      newStartDate = null;
-      newEndDate = null;
-    }
-
-    // Always trigger a fetch when the filter changes, even if dates haven't changed
-    // This ensures 'All Time' works even when dates are already null
-    if (initialLoadComplete) {
-      if (activeQuickFilter === 'All Time') {
-        console.log('[DEBUG] All Time filter selected, fetching all snippets');
-        startDate = null;
-        endDate = null;
-        fetchSnippets(false);
-      } else if (newStartDate !== startDate || newEndDate !== endDate) {
-        console.log(`[DEBUG] Setting date range: ${newStartDate} to ${newEndDate}`);
-        startDate = newStartDate;
-        endDate = newEndDate;
-        fetchSnippets(false);
-      }
-    }
+  // Simplified filter change handler
+  $: if (initialLoadComplete) {
+    console.log(`[DEBUG] Filter changed to: ${activeQuickFilter}`);
+    fetchSnippets(false);
   }
   
   // Refetch when group filter changes
