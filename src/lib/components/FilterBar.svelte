@@ -90,31 +90,48 @@
     {/each}
   </div>
 
-  <!-- Manual Date Range Inputs (Conditional) -->
-  {#if showDateRangeInputs}
-    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto mt-2 md:mt-0">
-      <div class="w-full sm:w-auto">
-        <label for="start-date" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+  <!-- Date Filters -->
+  <div class="flex flex-wrap gap-2">
+    {#each quickFilterOptions as filter}
+      <button
+        class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
+          {activeQuickFilter === filter
+            ? 'bg-brand-forest-green text-white dark:bg-brand-light-blue dark:text-brand-dark-earth'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-brand-charcoal-gray/40 dark:text-gray-300 dark:hover:bg-brand-charcoal-gray/60'}"
+        on:click={() => activeQuickFilter = filter}
+      >
+        {filter}
+      </button>
+    {/each}
+  </div>
+
+  <!-- Custom Date Range Inputs -->
+  {#if activeQuickFilter === 'Custom Range'}
+    <div class="flex flex-wrap gap-4 mt-4">
+      <div class="flex-1 min-w-[200px]">
+        <label for="start-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Start Date
+        </label>
         <input
           type="date"
           id="start-date"
           bind:value={startDate}
-          on:input={handleDateInputChange}
-          class="block w-full px-3 py-1.5 text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand-forest-green focus:border-brand-forest-green dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue"
-        />
+          class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-forest-green focus:border-brand-forest-green dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue text-gray-700 bg-white dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white sm:text-sm"
+          on:change={handleFilter}
+        >
       </div>
-      <div class="w-full sm:w-auto">
-        <label for="end-date" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+      <div class="flex-1 min-w-[200px]">
+        <label for="end-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          End Date
+        </label>
         <input
           type="date"
           id="end-date"
           bind:value={endDate}
-          on:input={handleDateInputChange}
-          class="block w-full px-3 py-1.5 text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand-forest-green focus:border-brand-forest-green dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue"
-        />
+          class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-forest-green focus:border-brand-forest-green dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue text-gray-700 bg-white dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white sm:text-sm"
+          on:change={handleFilter}
+        >
       </div>
     </div>
-  {:else}
-    <div class="h-10 md:h-0"></div>
   {/if}
 </div> 
