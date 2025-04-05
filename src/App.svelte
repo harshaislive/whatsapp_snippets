@@ -57,7 +57,7 @@
   let searchQuery = '';
   let debouncedSearchQuery = '';
   let searchTimeout: ReturnType<typeof setTimeout>;
-  let showGroupMessagesOnly = false;
+  let showGroupMessagesOnly = import.meta.env.VITE_DEFAULT_GROUP_MESSAGES_ONLY === 'true';
 
   // --- Reactive State for Grouping ---
   let groupedSnippets: Record<string, Snippet[]> = {};
