@@ -90,21 +90,6 @@
     {/each}
   </div>
 
-  <!-- Date Filters -->
-  <div class="flex flex-wrap gap-2">
-    {#each quickFilterOptions as filter}
-      <button
-        class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
-          {activeQuickFilter === filter
-            ? 'bg-brand-forest-green text-white dark:bg-brand-light-blue dark:text-brand-dark-earth'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-brand-charcoal-gray/40 dark:text-gray-300 dark:hover:bg-brand-charcoal-gray/60'}"
-        on:click={() => activeQuickFilter = filter}
-      >
-        {filter}
-      </button>
-    {/each}
-  </div>
-
   <!-- Custom Date Range Inputs -->
   {#if activeQuickFilter === 'Custom Range'}
     <div class="flex flex-wrap gap-4 mt-4">
