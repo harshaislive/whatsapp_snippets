@@ -680,32 +680,8 @@
 {/if}
 
 <style>
-  /* ... existing styles ... */
-
-  .header-controls {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .theme-toggle,
-  .blocked-jids-toggle {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .theme-toggle:hover,
-  .blocked-jids-toggle:hover {
-    background-color: var(--hover-bg);
-  }
-
+  /* Only keep used styles */
   .blocked-jids-manager {
     margin-bottom: 2rem;
   }
-
-  /* ... rest of existing styles ... */
 </style>
