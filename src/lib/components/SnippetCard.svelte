@@ -52,6 +52,9 @@
   // Helper to get sender display name
   $: senderDisplayName = snippet.sender_name || snippet.sender_jid?.split('@')[0] || 'Unknown Sender';
   
+  // --- DEBUGGING --- 
+  $: console.log('[SnippetCard] Received snippet:', JSON.parse(JSON.stringify(snippet))); // Log full snippet data
+  
   // Add initial for avatar
   $: senderInitial = senderDisplayName.charAt(0).toUpperCase();
 
@@ -67,6 +70,9 @@
                    isAudioUrl ? 'audio' :
                    isMediaUrl ? 'media' : 'text';
                    
+  // --- DEBUGGING --- 
+  $: console.log(`[SnippetCard] Content: ${snippet.content}, isImageUrl: ${isImageUrl}, isVideoUrl: ${isVideoUrl}, isAudioUrl: ${isAudioUrl}, isMediaUrl: ${isMediaUrl}, messageType: ${messageType}`);
+  
   // Message content preview text
   $: contentPreview = messageType === 'text' ? 
                       (snippet.content?.length > 100 ? snippet.content.substring(0, 100) + '...' : snippet.content) : 
