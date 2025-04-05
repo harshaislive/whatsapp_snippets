@@ -13,7 +13,6 @@
   import { supabase } from './lib/supabaseClient';
   import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
-  import BlockedJids from './components/BlockedJids.svelte';
 
   // Change the title in the browser
   const pageTitle = 'WhatsApp Snippets | Beforest';
@@ -61,7 +60,6 @@
   let searchTimeout: ReturnType<typeof setTimeout>;
   let showGroupMessagesOnly = import.meta.env.VITE_DEFAULT_GROUP_MESSAGES_ONLY === 'true';
   let blockedJids: string[] = [];
-  let showBlockedJidsManager = false;
 
   // --- Reactive State for Grouping ---
   let groupedSnippets: Record<string, Snippet[]> = {};
@@ -580,7 +578,7 @@
               {/if}
             </button>
 
-            <!-- Logout Button (New) -->
+            <!-- Logout Button -->
             <button 
               type="button" 
               class="p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
@@ -591,16 +589,6 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-            </button>
-
-            <!-- Blocked JIDs Toggle -->
-            <button
-              type="button"
-              class="p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
-              on:click={() => showBlockedJidsManager = !showBlockedJidsManager}
-              title={showBlockedJidsManager ? 'Hide Blocked JIDs' : 'Manage Blocked JIDs'}
-            >
-              {showBlockedJidsManager ? '❌' : '🚫'}
             </button>
           </div>
         </div>
@@ -667,21 +655,11 @@
         <p>© {new Date().getFullYear()} Beforest Snippets. All rights reserved.</p>
       </footer>
     </main>
-
-    <!-- Blocked JIDs Manager -->
-    {#if showBlockedJidsManager}
-      <div class="blocked-jids-manager" transition:fade>
-        <BlockedJids />
-      </div>
-    {/if}
   </div>
 {:else}
   <Login />
 {/if}
 
 <style>
-  /* Only keep used styles */
-  .blocked-jids-manager {
-    margin-bottom: 2rem;
-  }
+  /* Remove unused styles */
 </style>
