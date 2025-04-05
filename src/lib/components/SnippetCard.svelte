@@ -191,26 +191,32 @@
           <div class="media-wrapper mb-2 overflow-hidden shadow-apple-sm hover:shadow-md transition-shadow duration-300 rounded-md">
             <video 
               controls 
-              src={getMediaUrl(snippet.content)} 
-              class="w-full max-h-[300px]"
-              on:error={handleMediaError}
-            >
-              Your browser doesn't support video playback.
+              src={getMediaUrl(snippet.content)}
+              class="w-full max-h-96 object-contain">
+              <track kind="captions" src="" label="English" />
+              Your browser does not support the video tag.
             </video>
           </div>
-          {#if snippet.caption}
-            <p class="text-xs italic mt-1 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
-          {/if}
-          <!-- Always show link for direct access -->
-          <div class="mt-2">
-            <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
-               class="text-xs text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 inline-flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        {/if}
+        
+        <!-- Media caption and download link -->
+        {#if snippet.caption || isMediaUrl}
+          <div class="flex items-center text-sm text-gray-600 dark:text-gray-300 mt-2">
+            <div class="flex-1 min-w-0">
+              <span class="truncate">{snippet.caption || 'Media attachment'}</span>
+            </div>
+            <a 
+              href={getMediaUrl(snippet.content)} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              aria-label="Download media attachment" 
+              class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Open video in new tab
             </a>
           </div>
+        {/if}
         {:else if isAudioUrl}
           <div class="media-wrapper mb-2 p-3 bg-brand-off-white dark:bg-brand-charcoal-gray/60 rounded-md overflow-hidden">
             <audio 

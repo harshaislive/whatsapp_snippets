@@ -1,6 +1,6 @@
 <!-- BlockedJids.svelte -->
 <script lang="ts">
-  import { supabase } from '../supabaseClient';
+  import { supabase } from '../lib/supabaseClient';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
