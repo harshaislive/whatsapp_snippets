@@ -124,7 +124,10 @@
 
       // Exclude blocked JIDs if any exist
       if (blockedJids.length > 0) {
-        query = query.not('sender_jid', 'in', blockedJids);
+        // Use individual not.eq filters instead of not.in for better handling of special characters
+        blockedJids.forEach(jid => {
+          query = query.not('sender_jid', 'eq', jid);
+        });
       }
 
       // Apply pagination
