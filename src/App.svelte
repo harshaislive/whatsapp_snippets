@@ -617,8 +617,14 @@
       </div>
       
       <!-- Sentinel Element for Infinite Scroll -->
-      {#if !canLoadMore && !loading}
-        <div bind:this={sentinel} class="h-4 w-full my-8"></div>
+      {#if canLoadMore && !loading} 
+        <!-- Render sentinel *only if* there might be more to load and we aren't already loading -->
+        <div bind:this={sentinel} class="h-10 w-full my-8"></div> <!-- Increased height slightly -->
+      {/if}
+      
+      {#if !canLoadMore && !loading && initialLoadComplete && snippets.length > 0}
+         <!-- Optional: Show an "End of results" message when loading is complete -->
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">End of snippets.</div>
       {/if}
 
       <!-- Footer -->
