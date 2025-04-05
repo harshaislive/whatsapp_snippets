@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegiblePrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Base styles for light/dark mode */
+body {
+  @apply bg-gray-50 text-gray-900 dark:bg-brand-dark-earth dark:text-gray-100;
+}
+
+a {
+  @apply text-brand-forest-green hover:text-brand-forest-green/80 dark:text-brand-light-blue dark:hover:text-brand-light-blue/90;
+}
+
+::placeholder {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.dark .dark\:card-bg {
+  @apply bg-brand-charcoal-gray/30 border-brand-charcoal-gray/30;
+}
+
+/* Height variables */
+:root {
+  --header-height: 64px;
+  --filter-bar-height: 56px;
+}
+
+.h-header {
+  height: var(--header-height);
+}
+
+.h-filter-bar {
+  height: var(--filter-bar-height);
+}
+
+.top-header {
+  top: var(--header-height);
+}
+
+/* ScrollBar customization */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-brand-charcoal-gray/20;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full dark:bg-brand-charcoal-gray;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-brand-charcoal-gray/80;
+}
+
+/* Input fields dark mode improvement */
+.dark input,
+.dark textarea,
+.dark select {
+  @apply bg-brand-charcoal-gray/30 border-brand-charcoal-gray/50 text-white;
+}
+
+/* Improve button contrast in dark mode */
+.dark button {
+  @apply text-gray-300 hover:text-white;
+}
+
+/* Improved card styling for dark mode */
+.dark .snippet-card {
+  @apply bg-brand-charcoal-gray/40 border-brand-charcoal-gray/30 shadow-md;
+}
+
+/* Font Definitions */
+@font-face {
+  font-family: 'ABC Arizona Sans';
+  src: url('/fonts/ABCArizonaSans-Regular-Trial.woff2') format('woff2'),
+       url('/fonts/ABCArizonaSans-Regular-Trial.woff') format('woff');
+  font-weight: 400; /* Regular */
+  font-style: normal;
+  font-display: swap; /* Improves font loading performance */
+}
+
+/* Add other weights/styles for Sans if available and needed */
+
+@font-face {
+  font-family: 'ABC Arizona Flare';
+  src: url('/fonts/ABCArizonaFlare-Regular-Trial.woff2') format('woff2'),
+       url('/fonts/ABCArizonaFlare-Regular-Trial.woff') format('woff');
+  font-weight: 400; /* Regular */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ABC Arizona Flare';
+  src: url('/fonts/ABCArizonaFlare-Light-Trial.woff2') format('woff2'),
+       url('/fonts/ABCArizonaFlare-Light-Trial.woff') format('woff');
+  font-weight: 300; /* Light */
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Add other weights/styles for Flare if available and needed */
+
+/* Enhanced Base Styles */
+@layer base {
+  html {
+    @apply antialiased text-base;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: light dark; /* Signal support for color schemes */
+  }
+  
+  body {
+    @apply font-body bg-brand-off-white text-brand-dark-earth;
+    @apply dark:bg-brand-dark-earth dark:text-brand-soft-gray;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl font-medium leading-tight;
+  }
+  
+  h2 {
+    @apply text-2xl font-medium leading-tight;
+  }
+  
+  h3 {
+    @apply text-xl font-medium leading-tight;
+  }
+
+  a {
+    @apply text-brand-deep-blue hover:text-brand-coral-orange transition-all duration-200;
+    @apply dark:text-brand-light-blue dark:hover:text-brand-coral-orange;
+  }
+
+  input, select, textarea {
+    @apply text-base leading-relaxed font-body border border-brand-charcoal-gray/20 rounded-md;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-deep-blue/30 focus:border-brand-deep-blue/50;
+    @apply transition-all duration-200;
+    @apply dark:bg-brand-dark-brown dark:border-brand-charcoal-gray/40 dark:text-brand-soft-gray dark:focus:ring-brand-light-blue/30 dark:focus:border-brand-light-blue/50 dark:placeholder-brand-charcoal-gray;
+  }
+  
+  /* Basic button styles */
+  button, 
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    @apply inline-flex items-center justify-center;
+    @apply px-4 py-2 rounded-md;
+    @apply transition-all duration-200 ease-figma;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-deep-blue/30;
+    @apply dark:focus:ring-brand-light-blue/30; /* Adjust focus ring for dark */
+  }
+}
+
+/* Component Classes */
+@layer components {
+  /* Card variations */
+  .card {
+    @apply bg-white rounded-lg p-5 shadow-apple-sm border border-brand-charcoal-gray/10 transition-all duration-200 ease-apple;
+    @apply dark:bg-brand-dark-brown dark:border-brand-charcoal-gray/30 dark:shadow-figma;
+  }
+  
+  .card:hover {
+    @apply shadow-apple;
+    @apply dark:shadow-figma-floating dark:border-brand-charcoal-gray/40;
+  }
+  
+  .card-interactive {
+    @apply cursor-pointer;
+  }
+  
+  .card-interactive:hover {
+    @apply shadow-apple border-brand-charcoal-gray/20;
+  }
+  
+  .card-interactive:active {
+    @apply shadow-apple-sm;
+  }
+  
+  /* Floating panel (Figma-style) */
+  .floating-panel {
+    @apply bg-white/95 backdrop-blur-sm shadow-figma-floating rounded-xl border border-brand-charcoal-gray/10;
+    @apply dark:bg-brand-dark-brown/95 dark:border-brand-charcoal-gray/30;
+  }
+  
+  /* Button variations */
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium;
+    @apply transition-all duration-200 ease-figma;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-brand-deep-blue text-white;
+    @apply hover:bg-brand-deep-blue/90;
+    @apply focus:ring-brand-deep-blue/50;
+    @apply dark:bg-brand-light-blue dark:text-brand-dark-earth dark:hover:bg-brand-light-blue/90 dark:focus:ring-brand-light-blue/50;
+  }
+  
+  .btn-secondary {
+    @apply bg-brand-off-white text-brand-dark-earth border border-brand-charcoal-gray/20 hover:bg-brand-soft-gray/50 focus:ring-brand-charcoal-gray/30;
+    @apply dark:bg-brand-charcoal-gray/30 dark:text-brand-soft-gray dark:border-brand-charcoal-gray/50 dark:hover:bg-brand-charcoal-gray/40 dark:focus:ring-brand-soft-gray/30;
+  }
+  
+  .btn-accent {
+    @apply bg-brand-coral-orange text-white;
+    @apply hover:bg-brand-coral-orange/90;
+    @apply focus:ring-brand-coral-orange/50;
+    @apply dark:focus:ring-brand-coral-orange/50;
+  }
+  
+  /* Filter control styling */
+  .filter-control {
+    @apply bg-white rounded-md border border-brand-charcoal-gray/20;
+    @apply px-3 py-2 text-sm;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-deep-blue/30 focus:border-transparent;
+    @apply transition-all duration-200;
+    @apply dark:bg-brand-dark-brown dark:border-brand-charcoal-gray/40 dark:text-brand-soft-gray dark:focus:ring-brand-light-blue/30 dark:focus:border-brand-light-blue/50;
+  }
+  
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full inline-block mx-1;
+  }
+  
+  .status-dot-success {
+    @apply bg-brand-olive-green;
+  }
+  
+  .status-dot-neutral {
+    @apply bg-brand-charcoal-gray/50;
+  }
+  
+  .status-dot-alert {
+    @apply bg-brand-rich-red;
+  }
+  
+  /* Media display */
+  .media-wrapper {
+    @apply rounded-md overflow-hidden border border-brand-charcoal-gray/10;
+    @apply dark:border-brand-charcoal-gray/30;
+  }
+  
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-brand-soft-gray/70 dark:bg-brand-charcoal-gray/40 rounded;
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+    @apply dark:bg-brand-dark-brown/80 dark:border-brand-charcoal-gray/20;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
