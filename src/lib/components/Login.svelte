@@ -8,6 +8,16 @@
   let successMessage = '';
   let isDarkMode = false;
 
+  const ALLOWED_DOMAINS = ['beforest.co', 'bewild.life'];
+
+  function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return false;
+    
+    const domain = email.split('@')[1];
+    return ALLOWED_DOMAINS.includes(domain);
+  }
+
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
     const isMobileRedirect = params.get('mobile') === 'true';
@@ -43,32 +53,25 @@
       errorMessage = '';
       successMessage = '';
       
-      // Get the current URL
-      const currentOrigin = window.location.origin;
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
-      // For mobile devices, use a special redirect URL that forces default browser
-      const redirectTo = isMobile 
-        ? `${currentOrigin}?mobile=true&redirect=${encodeURIComponent(currentOrigin)}`
-        : currentOrigin;
-      
+      // Validate email format and domain
+      if (!email.trim()) {
+        throw new Error('Please enter your email address');
+      }
+
+      if (!isValidEmail(email)) {
+        throw new Error('Please use your @beforest.co or @bewild.life email address');
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: email.trim(),
         options: {
-          emailRedirectTo: redirectTo,
-          // Add custom email template with instructions for mobile users
-          data: {
-            redirectUrl: currentOrigin,
-            isMobile: isMobile
-          }
-        }
+          emailRedirectTo: window.location.origin,
+        },
       });
 
       if (error) throw error;
 
-      successMessage = isMobile 
-        ? 'Check your email for the login link! Please open the link in your default browser.'
-        : 'Check your email for the login link!';
+      successMessage = 'Check your email for the login link!';
       email = '';
     } catch (error: any) {
       errorMessage = error.message || 'An error occurred during login';
