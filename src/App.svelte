@@ -65,6 +65,9 @@
   let groupedSnippets: Record<string, Snippet[]> = {};
   let sortedGroupLabels: string[] = [];
 
+  // Add to top of script block
+  let showMobileSearch = false;
+
   // ADDED handler function for pagination events
   function handlePageChange(event: CustomEvent<{ page: number }>) {
     const newPage = event.detail.page;
@@ -515,14 +518,15 @@
 {#if $user}
   <div class="min-h-screen bg-gray-50 dark:bg-brand-dark-earth">
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 h-header dark:bg-brand-dark-brown dark:border-brand-charcoal-gray/40">
-      <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full">
-        <div class="flex items-center justify-between h-full">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 flex flex-col dark:bg-brand-dark-brown dark:border-brand-charcoal-gray/40">
+      <!-- Main Header Row -->
+      <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2">
+        <div class="flex items-center justify-between">
           <!-- Left: Logo & Title -->
           <div class="flex items-center">
             <div class="flex items-center">
               <!-- Logo container with both versions -->
-              <div class="relative w-20 h-20">
+              <div class="relative w-16 h-16 sm:w-20 sm:h-20">
                 <img
                   src="/Beforest - Green.png"
                   alt="Beforest Logo"
@@ -537,26 +541,26 @@
             </div>
           </div>
           
-          <!-- Center: Search and Filters -->
-          <div class="flex flex-1 items-center justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end space-x-4">
-            <!-- Date Filters (moved here) -->
+          <!-- Center: Search on desktop, hidden on mobile -->
+          <div class="hidden md:flex flex-1 items-center justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end space-x-4">
+            <!-- Date Filters (desktop only) -->
             <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
 
-            <!-- Group Messages Filter Toggle (moved here) -->
-            <label for="group-messages-toggle" class="flex-shrink-0 inline-flex items-center cursor-pointer">
+            <!-- Group Messages Filter Toggle (desktop only) -->
+            <label for="group-messages-toggle-desktop" class="flex-shrink-0 inline-flex items-center cursor-pointer">
               <input 
-                id="group-messages-toggle" 
+                id="group-messages-toggle-desktop" 
                 type="checkbox" 
                 bind:checked={showGroupMessagesOnly}
                 class="sr-only peer"
               >
               <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
-              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 hidden xl:inline">Group Only</span>
+              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:inline">Group Only</span>
             </label>
 
-            <!-- Search Input -->
+            <!-- Search Input (desktop only) -->
             <div class="w-full max-w-lg lg:max-w-xs">
-              <label for="search" class="sr-only">Search snippets</label>
+              <label for="search-desktop" class="sr-only">Search snippets</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -564,8 +568,8 @@
                   </svg>
                 </div>
                 <input 
-                  id="search" 
-                  name="search" 
+                  id="search-desktop" 
+                  name="search-desktop" 
                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-forest-green focus:border-brand-forest-green text-sm dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:placeholder-gray-400 dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue" 
                   placeholder="Search snippets..." 
                   type="search"
@@ -577,7 +581,20 @@
           </div>
           
           <!-- Right: Icons -->
-          <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2 sm:space-x-4">
+            <!-- Mobile Search Button (Shows/hides mobile search bar) -->
+            <button 
+              type="button"
+              class="md:hidden p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
+              aria-label="Toggle Search"
+              on:click={() => showMobileSearch = !showMobileSearch}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
+            <!-- Theme Toggle Button -->
             <button 
               type="button" 
               class="p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
@@ -610,6 +627,48 @@
               </svg>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Mobile Search (toggleable) -->
+      {#if showMobileSearch}
+        <div transition:fade="{{ duration: 150 }}" class="md:hidden bg-white dark:bg-brand-dark-brown border-t border-gray-200 dark:border-brand-charcoal-gray/40 py-2 px-4">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <input 
+              id="search-mobile" 
+              name="search-mobile" 
+              class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-forest-green focus:border-brand-forest-green text-sm dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:placeholder-gray-400 dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue" 
+              placeholder="Search snippets..." 
+              type="search"
+              bind:value={searchQuery} 
+              on:input={handleSearchInput} 
+            >
+          </div>
+        </div>
+      {/if}
+
+      <!-- Mobile Filters (always shown on mobile) -->
+      <div class="md:hidden bg-white dark:bg-brand-dark-brown border-t border-gray-200 dark:border-brand-charcoal-gray/40 py-2 px-4">
+        <!-- Mobile Date Filters -->
+        <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
+        
+        <!-- Mobile Group Messages Toggle -->
+        <div class="mt-2">
+          <label for="group-messages-toggle-mobile" class="inline-flex items-center cursor-pointer">
+            <input 
+              id="group-messages-toggle-mobile" 
+              type="checkbox" 
+              bind:checked={showGroupMessagesOnly}
+              class="sr-only peer"
+            >
+            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
+            <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Group Messages Only</span>
+          </label>
         </div>
       </div>
     </header>
