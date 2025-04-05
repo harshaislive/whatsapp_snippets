@@ -76,7 +76,8 @@
     errorMessage = null;
 
     const currentOffset = loadMore ? snippets.length : 0;
-    console.log(`Fetching snippets from offset ${currentOffset} between ${startDate || 'beginning'} and ${endDate || 'end'}`);
+    console.log(`Fetching snippets trigger: loadMore=${loadMore}, offset=${currentOffset}`);
+    console.log(`>>> fetchSnippets using dates: start=${startDate}, end=${endDate}`);
 
     try {
       let query = supabase
@@ -202,6 +203,30 @@
     }, 3000);
   }
 
+  // --- Logout Function ---
+  async function handleLogout() {
+    try {
+      loading = true; // Show loading indicator during logout
+      errorMessage = null;
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      console.log('User logged out successfully.');
+      // The reactive $user store update will automatically show the Login component.
+      // Reset state potentially sensitive or user-specific if needed, though
+      // App remount on login/logout often handles this.
+      snippets = [];
+      initialLoadComplete = false; 
+      startDate = null;
+      endDate = null;
+      activeQuickFilter = 'All Time';
+    } catch (error: any) {
+      console.error('Error logging out:', error);
+      errorMessage = `Logout failed: ${error.message}`;
+    } finally {
+      loading = false; // Hide loading indicator
+    }
+  }
+
   // --- Date Grouping Logic ---
   function getRelativeDateLabel(date: Date): string {
     const today = new Date();
@@ -245,11 +270,16 @@
 
   // Moved grouping logic into its own reactive block
   $: {
+    console.log(`Grouping logic triggered. activeQuickFilter: ${activeQuickFilter}`);
+    console.log(`Grouping ${filteredSnippets.length} filtered snippets.`);
+
     if (activeQuickFilter === 'All Time') {
+      console.log("--> Grouping for 'All Time' filter.");
       // For 'All Time', use a single group with a special key containing all filtered snippets
       groupedSnippets = { '__ALL__': filteredSnippets }; 
       sortedGroupLabels = ['__ALL__'];
     } else {
+      console.log("--> Grouping by date label.");
       // For other filters, use the daily grouping logic
       const groups = filteredSnippets.reduce((groups, snippet) => {
         try {
@@ -338,7 +368,7 @@
   });
 
   // --- Reactive Statements ---
-  // Update date filters based on active quick filter
+  // Update date filters based on active quick filter AND trigger fetch
   $: {
     let newStartDate: string | null = null;
     let newEndDate: string | null = null;
@@ -372,30 +402,27 @@
       newEndDate = null;
     }
 
-    // Only update and fetch if dates actually changed
+    // Only update and fetch if dates actually changed OR if filter is Custom Range (handled separately)
     if (newStartDate !== startDate || newEndDate !== endDate) {
       console.log(`Quick filter applied: ${activeQuickFilter}. Setting range: ${newStartDate} to ${newEndDate}`);
       startDate = newStartDate;
       endDate = newEndDate;
-      // Fetch is triggered reactively by startDate/endDate change
-    } 
-  }
-  
-  // Refetch (first page) when date filters change (manual or via quick filter)
-  $: {
-     if (initialLoadComplete) {
-        // Don't refetch immediately if Custom Range was just selected, wait for manual input
-        if (activeQuickFilter !== 'Custom Range' || startDate || endDate) {
-           console.log("Date filters changed, refetching first page...");
-           fetchSnippets(false);
-        }
-     }
+      // Refetch the first page if the initial load is complete
+      if (initialLoadComplete && activeQuickFilter !== 'Custom Range') {
+         console.log("Date filters changed via quick filter, refetching first page...");
+         fetchSnippets(false); // Fetch the first page
+      } else if (initialLoadComplete && activeQuickFilter === 'Custom Range' && (startDate || endDate)) {
+         // Handle fetch for custom range if dates are set
+         console.log("Custom range dates set, refetching first page...");
+         fetchSnippets(false);
+      }
+    }
   }
   
   // Refetch when group filter changes
   $: if (initialLoadComplete && showGroupMessagesOnly !== undefined) {
     console.log("Group filter changed, refetching first page...");
-    fetchSnippets(false);
+    fetchSnippets(false); // Fetch the first page
   }
   
   // --- Infinite Scroll Logic ---
@@ -497,6 +524,19 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
               {/if}
+            </button>
+
+            <!-- Logout Button (New) -->
+            <button 
+              type="button" 
+              class="p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
+              on:click={handleLogout}
+              aria-label="Logout"
+            >
+              <!-- Logout Icon (Heroicon: logout) -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
             </button>
           </div>
         </div>
