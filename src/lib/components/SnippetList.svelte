@@ -2,17 +2,13 @@
   // Placeholder for SnippetList component
   // Will receive 'snippets' array as a prop
   import SnippetCard from './SnippetCard.svelte';
-  import type { Snippet } from '../types'; // Assuming a types file
+  // No separate types file, Snippet type comes from App.svelte props
 
   // Type for a single snippet (should match App.svelte)
-  interface Snippet {
-    id: number | string;
-    timestamp: string;
-    // ... other fields
-  }
+  // Removed redundant local interface definition
   
   // Expect grouped snippets and sorted labels
-  export let groupedSnippets: Record<string, Snippet[]> = {};
+  export let groupedSnippets: Record<string, any[]> = {}; // Use any[] or a more specific type if possible
   export let sortedGroupLabels: string[] = [];
   export let loading: boolean = false; // For initial load
   export let loadingMore: boolean = false; // For subsequent loads
@@ -23,38 +19,6 @@
   // Number of skeleton cards to show while loading initially
   const initialSkeletonCount = 3;
 </script>
-
-{#if !loading && sortedGroupLabels.length === 0}
-  <div class="text-center py-10">
-    <p class="text-gray-500 dark:text-gray-400">No snippets found for the selected criteria.</p>
-  </div>
-{:else}
-  <div class="space-y-8">
-    {#each sortedGroupLabels as label (label)}
-      {@const snippetsInGroup = groupedSnippets[label] || []}
-      {#if snippetsInGroup.length > 0}
-        <!-- Only show header if label is not the special '__ALL__' key -->
-        {#if label !== '__ALL__'}
-          <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-brand-charcoal-gray/50 pb-2 mb-4">
-            {label}
-          </h2>
-        {/if}
-        
-        <div class="space-y-4">
-          {#each snippetsInGroup as snippet (snippet.id)}
-            <SnippetCard {snippet} />
-          {/each}
-        </div>
-      {/if}
-    {/each}
-
-    {#if loadingMore}
-      <div class="text-center py-4">
-        <span class="text-gray-500 dark:text-gray-400">Loading more...</span>
-      </div>
-    {/if}
-  </div>
-{/if}
 
 <div class="snippet-list">
   <!-- Initial Loading Skeletons -->
@@ -115,12 +79,14 @@
   {:else}
     <div class="mb-4 animate-fade-in">
       {#each sortedGroupLabels as dateLabel (dateLabel)}
-        <!-- Date Group Header -->
-        <div class="sticky top-[124px] z-10 mb-3 pt-2 pb-1 backdrop-blur-sm bg-brand-off-white/90 dark:bg-brand-dark-brown/90 border-b border-gray-200 dark:border-brand-charcoal-gray/30">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-brand-charcoal-gray dark:text-gray-300 px-2">
-            {dateLabel}
-          </h3>
-        </div>
+        <!-- Date Group Header (conditional) -->
+        {#if dateLabel !== '__ALL__'}
+          <div class="sticky top-[124px] z-10 mb-3 pt-2 pb-1 backdrop-blur-sm bg-brand-off-white/90 dark:bg-brand-dark-brown/90 border-b border-gray-200 dark:border-brand-charcoal-gray/30">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-brand-charcoal-gray dark:text-gray-300 px-2">
+              {dateLabel}
+            </h3>
+          </div>
+        {/if}
         
         <!-- Masonry Grid for this Date Group -->
         <div class="columns-1 md:columns-2 lg:columns-3 gap-4 mb-8">
