@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { user } from './lib/stores/authStore';
   import Login from './lib/components/Login.svelte';
   import FilterBar from './lib/components/FilterBar.svelte';
@@ -12,6 +12,8 @@
   } from '@supabase/supabase-js';
   import { supabase } from './lib/supabaseClient';
   import { tick } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import BlockedJids from './components/BlockedJids.svelte';
 
   // Change the title in the browser
   const pageTitle = 'WhatsApp Snippets | Beforest';
@@ -58,6 +60,8 @@
   let debouncedSearchQuery = '';
   let searchTimeout: ReturnType<typeof setTimeout>;
   let showGroupMessagesOnly = import.meta.env.VITE_DEFAULT_GROUP_MESSAGES_ONLY === 'true';
+  let blockedJids: string[] = [];
+  let showBlockedJidsManager = false;
 
   // --- Reactive State for Grouping ---
   let groupedSnippets: Record<string, Snippet[]> = {};
@@ -71,6 +75,24 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     // Use existing date range filters when changing page
     fetchSnippets(newPage, startDate, endDate);
+  }
+
+  // Function to fetch blocked JIDs
+  async function fetchBlockedJids() {
+    try {
+      const { data, error } = await supabase
+        .from('blocked_jids')
+        .select('jid');
+      
+      if (error) throw error;
+      
+      blockedJids = data.map(row => row.jid);
+      console.log('[DEBUG] Fetched blocked JIDs:', blockedJids);
+    } catch (error: any) {
+      console.error('Error fetching blocked JIDs:', error);
+      // Don't show this error to users, just log it
+      blockedJids = [];
+    }
   }
 
   // --- Functions ---
@@ -90,11 +112,23 @@
     console.log(`[DEBUG] Using effective dates: Start=${effectiveStartDate || 'none'}, End=${effectiveEndDate || 'none'}`);
 
     try {
+      // Ensure blocked JIDs are loaded
+      if (blockedJids.length === 0) {
+        await fetchBlockedJids();
+      }
+
       let query = supabase
         .from('whatsapp_snippets')
         .select('*', { count: 'exact' })
-        .order('timestamp', { ascending: false })
-        .range(currentOffset, currentOffset + snippetsPerPage - 1);
+        .order('timestamp', { ascending: false });
+
+      // Exclude blocked JIDs if any exist
+      if (blockedJids.length > 0) {
+        query = query.not('sender_jid', 'in', blockedJids);
+      }
+
+      // Apply pagination
+      query = query.range(currentOffset, currentOffset + snippetsPerPage - 1);
 
       // Apply date filters based on the *effective* dates for this fetch
       if (effectiveStartDate) {
@@ -109,13 +143,8 @@
       // Apply search query filter (if debounced query exists)
       if (debouncedSearchQuery) {
         console.log('[DEBUG] Applying search filter:', debouncedSearchQuery);
-        // Build a text search query string for Supabase
-        // Adjust columns based on what you want to search (content, sender_name, group_name etc.)
-        const searchQueryString = `${debouncedSearchQuery.split(' ').join(' | ')}`; // Simple OR search for words
-        query = query.textSearch('fts', searchQueryString, {
-           type: 'websearch', // Or 'plain' or 'phrase' depending on needs
-           config: 'english' 
-        });
+        // Use ILIKE for case-insensitive search across multiple columns
+        query = query.or(`content.ilike.%${debouncedSearchQuery}%,sender_name.ilike.%${debouncedSearchQuery}%,sender_jid.ilike.%${debouncedSearchQuery}%,group_name.ilike.%${debouncedSearchQuery}%,caption.ilike.%${debouncedSearchQuery}%`);
       }
       
       // Apply group filter if enabled (AFTER search)
@@ -560,6 +589,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
+
+            <!-- Blocked JIDs Toggle -->
+            <button
+              type="button"
+              class="p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-forest-green dark:text-gray-300 dark:hover:text-white dark:focus:ring-brand-light-blue dark:ring-offset-brand-dark-brown transition-colors duration-200"
+              on:click={() => showBlockedJidsManager = !showBlockedJidsManager}
+              title={showBlockedJidsManager ? 'Hide Blocked JIDs' : 'Manage Blocked JIDs'}
+            >
+              {showBlockedJidsManager ? '❌' : '🚫'}
+            </button>
           </div>
         </div>
       </div>
@@ -625,7 +664,45 @@
         <p>© {new Date().getFullYear()} Beforest Snippets. All rights reserved.</p>
       </footer>
     </main>
+
+    <!-- Blocked JIDs Manager -->
+    {#if showBlockedJidsManager}
+      <div class="blocked-jids-manager" transition:fade>
+        <BlockedJids />
+      </div>
+    {/if}
   </div>
 {:else}
   <Login />
 {/if}
+
+<style>
+  /* ... existing styles ... */
+
+  .header-controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .theme-toggle,
+  .blocked-jids-toggle {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .theme-toggle:hover,
+  .blocked-jids-toggle:hover {
+    background-color: var(--hover-bg);
+  }
+
+  .blocked-jids-manager {
+    margin-bottom: 2rem;
+  }
+
+  /* ... rest of existing styles ... */
+</style>

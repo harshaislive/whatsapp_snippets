@@ -9,6 +9,15 @@
   let isDarkMode = false;
 
   onMount(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isMobileRedirect = params.get('mobile') === 'true';
+    const redirectUrl = params.get('redirect');
+    
+    if (isMobileRedirect && redirectUrl) {
+      // Redirect to the actual application URL
+      window.location.href = decodeURIComponent(redirectUrl);
+    }
+
     if (typeof window !== 'undefined') {
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const savedTheme = localStorage.getItem('theme');
@@ -34,16 +43,32 @@
       errorMessage = '';
       successMessage = '';
       
+      // Get the current URL
+      const currentOrigin = window.location.origin;
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      // For mobile devices, use a special redirect URL that forces default browser
+      const redirectTo = isMobile 
+        ? `${currentOrigin}?mobile=true&redirect=${encodeURIComponent(currentOrigin)}`
+        : currentOrigin;
+      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: redirectTo,
+          // Add custom email template with instructions for mobile users
+          data: {
+            redirectUrl: currentOrigin,
+            isMobile: isMobile
+          }
         }
       });
 
       if (error) throw error;
 
-      successMessage = 'Check your email for the login link!';
+      successMessage = isMobile 
+        ? 'Check your email for the login link! Please open the link in your default browser.'
+        : 'Check your email for the login link!';
       email = '';
     } catch (error: any) {
       errorMessage = error.message || 'An error occurred during login';
