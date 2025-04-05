@@ -67,6 +67,7 @@
 
   // Add to top of script block
   let showMobileSearch = false;
+  const quickFilterOptions = ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'Custom Range'];
 
   // ADDED handler function for pagination events
   function handlePageChange(event: CustomEvent<{ page: number }>) {
@@ -542,24 +543,25 @@
           </div>
           
           <!-- Center: Search on desktop, hidden on mobile -->
-          <div class="hidden md:flex flex-1 items-center justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end space-x-4">
-            <!-- Date Filters (desktop only) -->
-            <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
-
-            <!-- Group Messages Filter Toggle (desktop only) -->
-            <label for="group-messages-toggle-desktop" class="flex-shrink-0 inline-flex items-center cursor-pointer">
-              <input 
-                id="group-messages-toggle-desktop" 
-                type="checkbox" 
-                bind:checked={showGroupMessagesOnly}
-                class="sr-only peer"
-              >
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
-              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:inline">Group Only</span>
-            </label>
-
+          <div class="hidden md:flex flex-1 items-center justify-center px-2 sm:px-8 space-x-4">
+            <!-- Date Filters (desktop only) - moved to center zone only -->
+            <div class="flex items-center space-x-2">
+              {#each quickFilterOptions as option}
+                <button
+                  type="button"
+                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out {activeQuickFilter === option ? 'bg-white dark:bg-brand-charcoal-gray/70 text-gray-800 dark:text-white shadow-sm dark:shadow-lg' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
+                  on:click={() => activeQuickFilter = option}
+                >
+                  {option}
+                </button>
+              {/each}
+            </div>
+          </div>
+          
+          <!-- Right: Search, Group Toggle, and Action Icons -->
+          <div class="flex items-center space-x-2 md:space-x-4">
             <!-- Search Input (desktop only) -->
-            <div class="w-full max-w-lg lg:max-w-xs">
+            <div class="hidden md:block w-48 lg:w-64 xl:w-80">
               <label for="search-desktop" class="sr-only">Search snippets</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -578,10 +580,19 @@
                 >
               </div>
             </div>
-          </div>
-          
-          <!-- Right: Icons -->
-          <div class="flex items-center space-x-2 sm:space-x-4">
+
+            <!-- Group Messages Filter Toggle (desktop only) -->
+            <label for="group-messages-toggle-desktop" class="hidden md:flex flex-shrink-0 items-center cursor-pointer">
+              <input 
+                id="group-messages-toggle-desktop" 
+                type="checkbox" 
+                bind:checked={showGroupMessagesOnly}
+                class="sr-only peer"
+              >
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
+              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 hidden xl:inline">Group Only</span>
+            </label>
+
             <!-- Mobile Search Button (Shows/hides mobile search bar) -->
             <button 
               type="button"
