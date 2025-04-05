@@ -1,51 +1,8 @@
 <script lang="ts">
   // Placeholder for SnippetCard component
   // Will receive a single 'snippet' object as a prop
-  import { onMount } from 'svelte';
-  import { user } from '../stores/authStore';
-  import { supabase } from '../supabaseClient';
-  import LikeButton from './LikeButton.svelte';
-  import CommentSection from './CommentSection.svelte';
-  import ShareButton from './ShareButton.svelte';
-  
   export let snippet: any; // Replace 'any' with a proper type later
-
-  // Social features state
-  let isLiked = false;
-  let likeCount = 0;
-  let commentCount = 0;
-  let commentExpanded = false;
-  
-  // Fetch like status and counts on mount
-  onMount(async () => {
-    if ($user) {
-      // Check if the current user has liked this snippet
-      const { data: likeData } = await supabase
-        .from('snippet_likes')
-        .select('id')
-        .eq('snippet_id', snippet.id)
-        .eq('user_id', $user.id)
-        .single();
-      
-      isLiked = !!likeData;
-    }
-    
-    // Get total like count
-    const { count: likes } = await supabase
-      .from('snippet_likes')
-      .select('id', { count: 'exact' })
-      .eq('snippet_id', snippet.id);
-      
-    likeCount = likes || 0;
-    
-    // Get total comment count
-    const { count: comments } = await supabase
-      .from('snippet_comments')
-      .select('id', { count: 'exact' })
-      .eq('snippet_id', snippet.id);
-      
-    commentCount = comments || 0;
-  });
+  import { onMount } from 'svelte';
 
   // Function to format timestamp
   function formatTimestamp(timestamp: string): string {
@@ -174,9 +131,107 @@
     errorDiv.textContent = 'Media failed to load. Click the link below to open in a new tab.';
     target.parentElement?.appendChild(errorDiv);
   }
+
+  // Reference to the card element
+  let cardElement: HTMLElement;
+
+  // Function to remove social interaction elements
+  function removeSocialElements() {
+    if (!cardElement) return;
+
+    // Target common social interaction selectors
+    const selectors = [
+      '[class*="like"]', 
+      '[class*="share"]', 
+      '[class*="comment"]',
+      '[class*="social"]',
+      '[class*="react"]',
+      '[class*="interaction"]',
+      '[id*="like"]',
+      '[id*="share"]',
+      '[id*="comment"]',
+      'button:contains("Like")',
+      'button:contains("Share")',
+      'button:contains("Comment")',
+      'a:contains("Like")',
+      'a:contains("Share")',
+      'a:contains("Comment")'
+    ];
+
+    // Custom contains selector implementation
+    const findElementsWithText = (root: HTMLElement, tagName: string, text: string) => {
+      const elements = root.getElementsByTagName(tagName);
+      const result = [];
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i].textContent?.includes(text)) {
+          result.push(elements[i]);
+        }
+      }
+      return result;
+    };
+
+    // Process standard selectors
+    selectors.forEach(selector => {
+      try {
+        if (selector.includes(':contains(')) {
+          // Handle custom contains selector
+          const [tag, textMatch] = selector.split(':contains(');
+          const text = textMatch.replace(')', '').replace(/"/g, '');
+          const elements = findElementsWithText(cardElement, tag, text);
+          elements.forEach(el => el.remove());
+        } else {
+          // Standard selector
+          const elements = cardElement.querySelectorAll(selector);
+          elements.forEach(el => el.remove());
+        }
+      } catch (err) {
+        console.error('Error removing social elements:', err);
+      }
+    });
+  }
+
+  // Set up a mutation observer to continuously remove social elements
+  // This will catch any elements added after initial render
+  onMount(() => {
+    removeSocialElements();
+
+    // Set up mutation observer to catch dynamically added elements
+    const observer = new MutationObserver((mutations) => {
+      removeSocialElements();
+    });
+
+    // Start observing the card for changes
+    if (cardElement) {
+      observer.observe(cardElement, { 
+        childList: true, 
+        subtree: true 
+      });
+    }
+
+    // Clean up on component unmount
+    return () => {
+      observer?.disconnect();
+    };
+  });
 </script>
 
-<div class="card mb-4 animate-fade-in hover:translate-y-[-1px] transition-transform duration-200 bg-white dark:bg-brand-charcoal-gray/40 p-4 rounded-lg shadow-sm dark:shadow-md border border-gray-100 dark:border-brand-charcoal-gray/30">
+<style>
+  /* Hide any potential social interaction elements */
+  :global([class*="like"]),
+  :global([class*="share"]),
+  :global([class*="comment"]),
+  :global([class*="social-interaction"]),
+  :global([class*="social-buttons"]),
+  :global([class*="social-actions"]),
+  :global([class*="reactions"]),
+  :global([id*="like"]),
+  :global([id*="share"]),
+  :global([id*="comment"]) {
+    display: none !important;
+  }
+</style>
+
+<div bind:this={cardElement} class="card mb-4 animate-fade-in hover:translate-y-[-1px] transition-transform duration-200 bg-white dark:bg-brand-charcoal-gray/40 p-4 rounded-lg shadow-sm dark:shadow-md border border-gray-100 dark:border-brand-charcoal-gray/30">
   <div class="flex items-start">
     <!-- Avatar Circle -->
     <div class="flex-shrink-0 flex justify-center items-center w-10 h-10 rounded-full mr-3 bg-brand-deep-blue dark:bg-brand-light-blue text-white font-medium">
@@ -292,8 +347,7 @@
                 <span class="truncate whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed">{snippet.caption || 'Media attachment'}</span>
               </div>
               <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
-                 class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0"
-                 aria-label="Open attachment in new tab">
+                 class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -341,29 +395,5 @@
         </span>
       </div>
     </div>
-  </div>
-  
-  <!-- Social Features Bar -->
-  <div class="mt-4 pt-3 border-t border-gray-100 dark:border-brand-charcoal-gray/30 flex items-center space-x-6">
-    <!-- Like Button -->
-    <LikeButton 
-      snippetId={snippet.id} 
-      bind:isLiked={isLiked} 
-      bind:likeCount={likeCount} 
-    />
-    
-    <!-- Comment Section -->
-    <CommentSection 
-      snippetId={snippet.id} 
-      bind:commentCount={commentCount} 
-      bind:expanded={commentExpanded}
-      on:update={({ detail }) => commentCount = detail.count}
-    />
-    
-    <!-- Share Button -->
-    <ShareButton 
-      snippetId={snippet.id} 
-      snippetContent={snippet.content} 
-    />
   </div>
 </div> 
