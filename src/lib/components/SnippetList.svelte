@@ -2,6 +2,7 @@
   // Placeholder for SnippetList component
   // Will receive 'snippets' array as a prop
   import SnippetCard from './SnippetCard.svelte';
+  import type { Snippet } from '../types'; // Assuming a types file
 
   // Type for a single snippet (should match App.svelte)
   interface Snippet {
@@ -22,6 +23,38 @@
   // Number of skeleton cards to show while loading initially
   const initialSkeletonCount = 3;
 </script>
+
+{#if !loading && sortedGroupLabels.length === 0}
+  <div class="text-center py-10">
+    <p class="text-gray-500 dark:text-gray-400">No snippets found for the selected criteria.</p>
+  </div>
+{:else}
+  <div class="space-y-8">
+    {#each sortedGroupLabels as label (label)}
+      {@const snippetsInGroup = groupedSnippets[label] || []}
+      {#if snippetsInGroup.length > 0}
+        <!-- Only show header if label is not the special '__ALL__' key -->
+        {#if label !== '__ALL__'}
+          <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-brand-charcoal-gray/50 pb-2 mb-4">
+            {label}
+          </h2>
+        {/if}
+        
+        <div class="space-y-4">
+          {#each snippetsInGroup as snippet (snippet.id)}
+            <SnippetCard {snippet} />
+          {/each}
+        </div>
+      {/if}
+    {/each}
+
+    {#if loadingMore}
+      <div class="text-center py-4">
+        <span class="text-gray-500 dark:text-gray-400">Loading more...</span>
+      </div>
+    {/if}
+  </div>
+{/if}
 
 <div class="snippet-list">
   <!-- Initial Loading Skeletons -->

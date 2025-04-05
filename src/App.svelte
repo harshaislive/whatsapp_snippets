@@ -57,6 +57,10 @@
   let searchTimeout: ReturnType<typeof setTimeout>;
   let showGroupMessagesOnly = false;
 
+  // --- Reactive State for Grouping ---
+  let groupedSnippets: Record<string, Snippet[]> = {};
+  let sortedGroupLabels: string[] = [];
+
   // --- Functions ---
   async function fetchSnippets(loadMore = false) {
     if (loadingMore && loadMore) return;
@@ -237,33 +241,46 @@
            groupName.includes(query);
   });
 
-  $: groupedSnippets = filteredSnippets.reduce((groups, snippet) => {
-    try {
-      const snippetDate = new Date(snippet.timestamp);
-      const label = getRelativeDateLabel(snippetDate);
-      if (!groups[label]) {
-        groups[label] = [];
-      }
-      groups[label].push(snippet);
-    } catch (e) {
-      console.error("Error parsing date for grouping:", snippet.timestamp, e);
-    }
-    return groups;
-  }, {} as Record<string, Snippet[]>);
-  
-  $: sortedGroupLabels = Object.keys(groupedSnippets).sort((a, b) => {
-      if (a === 'Today') return -1;
-      if (b === 'Today') return 1;
-      if (a === 'Yesterday') return -1;
-      if (b === 'Yesterday') return 1;
-      // Sort older dates chronologically descending
-      try {
-          return new Date(b).getTime() - new Date(a).getTime();
-      } catch (e) {
-          return 0; // Fallback if date parsing fails
-      }
-  });
+  // Moved grouping logic into its own reactive block
+  $: {
+    if (activeQuickFilter === 'All Time') {
+      // For 'All Time', use a single group with a special key containing all filtered snippets
+      groupedSnippets = { '__ALL__': filteredSnippets }; 
+      sortedGroupLabels = ['__ALL__'];
+    } else {
+      // For other filters, use the daily grouping logic
+      const groups = filteredSnippets.reduce((groups, snippet) => {
+        try {
+          const snippetDate = new Date(snippet.timestamp);
+          const label = getRelativeDateLabel(snippetDate);
+          if (!groups[label]) {
+            groups[label] = [];
+          }
+          groups[label].push(snippet);
+        } catch (e) {
+          console.error("Error parsing date for grouping:", snippet.timestamp, e);
+        }
+        return groups;
+      }, {} as Record<string, Snippet[]>);
+      
+      groupedSnippets = groups;
 
+      // Sort the daily labels
+      sortedGroupLabels = Object.keys(groupedSnippets).sort((a, b) => {
+          if (a === 'Today') return -1;
+          if (b === 'Today') return 1;
+          if (a === 'Yesterday') return -1;
+          if (b === 'Yesterday') return 1;
+          // Sort older dates chronologically descending
+          try {
+              return new Date(b).getTime() - new Date(a).getTime();
+          } catch (e) {
+              return 0; // Fallback if date parsing fails
+          }
+      });
+    }
+  }
+  
   // --- Dark Mode Logic ---
   function toggleTheme() {
     isDarkMode = !isDarkMode;
