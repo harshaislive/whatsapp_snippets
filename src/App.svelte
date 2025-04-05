@@ -4,6 +4,7 @@
   import Login from './lib/components/Login.svelte';
   import FilterBar from './lib/components/FilterBar.svelte';
   import SnippetList from './lib/components/SnippetList.svelte';
+  import Pagination from './lib/components/Pagination.svelte';
   import type {
     RealtimeChannel,
     RealtimePostgresChangesPayload,
@@ -42,14 +43,15 @@
   let endDate: string | null = null;
   let snippets: Snippet[] = [];
   let loading: boolean = true;
-  let loadingMore: boolean = false;
   let errorMessage: string | null = null;
   let channel: RealtimeChannel | null = null;
   let initialLoadComplete = false;
   let showSuccessToast = false;
   let newMessageCount = 0;
-  let canLoadMore = true;
   const snippetsPerPage = 20;
+  let currentPage = 1;
+  let totalPages = 0;
+  let totalItems = 0;
   let activeQuickFilter = 'All Time';
   let isDarkMode: boolean = false;
   let searchQuery = '';
@@ -61,27 +63,28 @@
   let groupedSnippets: Record<string, Snippet[]> = {};
   let sortedGroupLabels: string[] = [];
 
-  // --- Functions ---
-  async function fetchSnippets(loadMore = false, fetchStartDate: string | null = null, fetchEndDate: string | null = null) {
-    if (loadingMore && loadMore) return;
-    if (!canLoadMore && loadMore) return;
+  // ADDED handler function for pagination events
+  function handlePageChange(event: CustomEvent<{ page: number }>) {
+    const newPage = event.detail.page;
+    console.log(`[App] Page change event received. Fetching page: ${newPage}`);
+    // Use existing date range filters when changing page
+    fetchSnippets(newPage, startDate, endDate);
+  }
 
+  // --- Functions ---
+  async function fetchSnippets(page: number, fetchStartDate: string | null = null, fetchEndDate: string | null = null) {
     // Determine the effective dates to use for this specific fetch operation
     // Prioritize passed parameters, fall back to component state
     const effectiveStartDate = fetchStartDate !== null ? fetchStartDate : startDate;
     const effectiveEndDate = fetchEndDate !== null ? fetchEndDate : endDate;
 
-    if (loadMore) {
-      loadingMore = true;
-    } else {
-      loading = true;
-      snippets = []; // Reset snippets only on a full refresh, not just loading more
-      canLoadMore = true;
-    }
+    // Reset state for a new fetch (not loading more)
+    loading = true;
     errorMessage = null;
 
-    const currentOffset = loadMore ? snippets.length : 0;
-    console.log(`[DEBUG] fetchSnippets called. Filter: ${activeQuickFilter}, LoadMore: ${loadMore}`);
+    // Calculate offset based on page number
+    const currentOffset = (page - 1) * snippetsPerPage;
+    console.log(`[DEBUG] fetchSnippets called. Page: ${page}, Filter: ${activeQuickFilter}`);
     console.log(`[DEBUG] Using effective dates: Start=${effectiveStartDate || 'none'}, End=${effectiveEndDate || 'none'}`);
 
     try {
@@ -101,7 +104,19 @@
         query = query.lte('timestamp', `${effectiveEndDate}T23:59:59.999Z`);
       }
 
-      // Apply group filter if enabled
+      // Apply search query filter (if debounced query exists)
+      if (debouncedSearchQuery) {
+        console.log('[DEBUG] Applying search filter:', debouncedSearchQuery);
+        // Build a text search query string for Supabase
+        // Adjust columns based on what you want to search (content, sender_name, group_name etc.)
+        const searchQueryString = `${debouncedSearchQuery.split(' ').join(' | ')}`; // Simple OR search for words
+        query = query.textSearch('fts', searchQueryString, {
+           type: 'websearch', // Or 'plain' or 'phrase' depending on needs
+           config: 'english' 
+        });
+      }
+      
+      // Apply group filter if enabled (AFTER search)
       if (showGroupMessagesOnly) {
         query = query.eq('is_group', true);
       }
@@ -116,34 +131,28 @@
       
       const fetchedSnippets = data || [];
 
-      if (loadMore) {
-        snippets = [...snippets, ...fetchedSnippets];
-      } else {
-        // Only replace snippets if it's a full refresh (not loading more)
-        snippets = fetchedSnippets;
-      }
+      // Always replace snippets with the fetched page data
+      snippets = fetchedSnippets;
 
-      if (count === null || snippets.length >= count) {
-        console.log("[DEBUG] No more snippets to load or total reached.");
-        canLoadMore = false;
-      } else {
-        // Ensure canLoadMore is true if we received results and haven't hit the total count
-        canLoadMore = true; 
-      }
+      // Update pagination state based on the count from Supabase
+      totalItems = count || 0;
+      totalPages = Math.ceil(totalItems / snippetsPerPage);
+      currentPage = page; // Update current page to the page just fetched
+
+      console.log(`[DEBUG] Updated state: currentPage=${currentPage}, totalPages=${totalPages}, totalItems=${totalItems}`);
 
     } catch (error: any) {
       console.error("Error fetching snippets:", error);
       errorMessage = `Failed to fetch snippets: ${error.message}`;
-      if (!loadMore) snippets = []; // Clear snippets on error during full refresh
-      canLoadMore = false; // Stop trying to load more on error
+      snippets = []; // Clear snippets on error
+      totalPages = 0;
+      totalItems = 0;
+      // Keep currentPage as is, or reset to 1? Maybe keep.
     } finally {
-      if (loadMore) {
-        loadingMore = false;
-      } else {
-        loading = false;
-        // Mark initial load complete only after the *first* successful non-loadMore fetch attempt finishes
-        if (!initialLoadComplete) initialLoadComplete = true;
-      }
+      // Always set loading to false when fetch attempt finishes
+      loading = false;
+      // Mark initial load complete only after the *first* successful fetch attempt finishes
+      if (!initialLoadComplete) initialLoadComplete = true;
     }
   }
 
@@ -367,7 +376,7 @@
     
     // Title setting, fetch, and subscription setup
     document.title = pageTitle;
-    fetchSnippets();
+    fetchSnippets(1); // Fetch page 1 on initial load
     setupRealtimeSubscription();
 
     // Cleanup function for subscription and theme listener
@@ -423,59 +432,47 @@
     // And only if the dates calculated for the new filter differ from the current state
     if (initialLoadComplete && datesActuallyChanged) {
         console.log(`[DEBUG] Filter/Date change detected. New Range: ${newStartDate || 'none'} - ${newEndDate || 'none'}`);
-        // Update component state first, so it's correct for future operations (like infinite scroll)
+        // Update component state first
         startDate = newStartDate;
         endDate = newEndDate;
+        currentPage = 1; // Reset to page 1 for new filters
         
-        // Then trigger a fetch *explicitly* using the newly calculated dates
-        fetchSnippets(false, newStartDate, newEndDate); 
+        // Then trigger a fetch for page 1 with the new dates
+        fetchSnippets(currentPage, newStartDate, newEndDate); 
     } else if (initialLoadComplete) {
         console.log(`[DEBUG] Filter changed (${activeQuickFilter}), but calculated dates match current state (${startDate}, ${endDate}). No date-driven refetch.`);
     } else {
         console.log(`[DEBUG] Initial load not complete, skipping fetch trigger in date reactive block.`);
-        // Update state even before initial load, so it's correct when the first fetch runs
+        // Update state even before initial load
         startDate = newStartDate;
         endDate = newEndDate;
     }
   }
   
   // Refetch when group filter changes, using the current date range state
-  $: if (initialLoadComplete && showGroupMessagesOnly !== undefined) {
-    // Need to check if the value actually changed if this block triggers multiple times initially
-    // A simple way is to compare with a previous state, but for now, just log and fetch.
-    console.log(`[DEBUG] Group filter changed to ${showGroupMessagesOnly}. Refetching with current dates: ${startDate || 'none'} - ${endDate || 'none'}`);
-    // Pass the current state dates to the fetch function
-    fetchSnippets(false, startDate, endDate); 
+  let previousShowGroupMessagesOnly: boolean | undefined = undefined; // Track previous state
+  $: if (initialLoadComplete && showGroupMessagesOnly !== previousShowGroupMessagesOnly) {
+    console.log(`[DEBUG] Group filter changed to ${showGroupMessagesOnly}. Refetching page 1 with current dates: ${startDate || 'none'} - ${endDate || 'none'}`);
+    currentPage = 1; // Reset to page 1
+    // Pass the current state dates to the fetch function for page 1
+    fetchSnippets(currentPage, startDate, endDate); 
+    previousShowGroupMessagesOnly = showGroupMessagesOnly; // Update previous state
   }
   
-  // --- Infinite Scroll Logic ---
-  let sentinel: HTMLElement;
-  onMount(() => {
-      const observer = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting && canLoadMore && !loading && !loadingMore) {
-              console.log("Sentinel intersecting, loading more...");
-              fetchSnippets(true);
-          }
-      });
-
-      if (sentinel) {
-          observer.observe(sentinel);
-      }
-
-      return () => {
-          if (sentinel) {
-              observer.unobserve(sentinel);
-          }
-      };
-  });
-
   // --- Search Logic ---
   function handleSearchInput() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      debouncedSearchQuery = searchQuery.trim().toLowerCase();
-      console.log('Debounced search query:', debouncedSearchQuery);
-      // Filtering happens reactively based on debouncedSearchQuery
+      const newQuery = searchQuery.trim().toLowerCase();
+      // Trigger fetch only if the debounced query actually changes
+      if (newQuery !== debouncedSearchQuery) {
+         debouncedSearchQuery = newQuery;
+         console.log('Debounced search query changed:', debouncedSearchQuery, 'Refetching page 1.');
+         currentPage = 1; // Reset to page 1 for new search
+         fetchSnippets(currentPage, startDate, endDate); // Fetch page 1 with current dates/filters
+      } else {
+         console.log('Debounced search query unchanged:', debouncedSearchQuery);
+      }
     }, 300); // Debounce delay of 300ms
   }
 </script>
@@ -613,18 +610,12 @@
 
       <!-- Snippet List -->
       <div class="mt-6">
-        <SnippetList {groupedSnippets} {sortedGroupLabels} {loading} {loadingMore} />
+        <SnippetList {groupedSnippets} {sortedGroupLabels} {loading} />
       </div>
       
-      <!-- Sentinel Element for Infinite Scroll -->
-      {#if canLoadMore && !loading} 
-        <!-- Render sentinel *only if* there might be more to load and we aren't already loading -->
-        <div bind:this={sentinel} class="h-10 w-full my-8"></div> <!-- Increased height slightly -->
-      {/if}
-      
-      {#if !canLoadMore && !loading && initialLoadComplete && snippets.length > 0}
-         <!-- Optional: Show an "End of results" message when loading is complete -->
-        <div class="text-center py-8 text-gray-500 dark:text-gray-400">End of snippets.</div>
+      <!-- ADDED Pagination Component -->
+      {#if !loading && totalPages > 0}
+         <Pagination {currentPage} {totalPages} on:changePage={handlePageChange} />
       {/if}
 
       <!-- Footer -->

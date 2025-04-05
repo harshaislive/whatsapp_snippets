@@ -58,25 +58,78 @@
   // Add initial for avatar
   $: senderInitial = senderDisplayName.charAt(0).toUpperCase();
 
-  // Helper to determine if content is a media URL
-  $: isMediaUrl = typeof snippet.content === 'string' && (snippet.content.startsWith('http') || snippet.content.startsWith('blob:'));
-  $: isImageUrl = isMediaUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(snippet.content);
-  $: isVideoUrl = isMediaUrl && /\.(mp4|webm|ogg|mov)$/i.test(snippet.content);
-  $: isAudioUrl = isMediaUrl && /\.(mp3|wav|ogg|m4a)$/i.test(snippet.content);
+  // Declare media type variables
+  let isMediaUrl = false;
+  let isImageUrl = false;
+  let isVideoUrl = false;
+  let isAudioUrl = false;
+
+  function isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Enhanced media type detection
+  $: {
+    const content = snippet.content || '';
+    const messageType = snippet.message_type?.toLowerCase() || '';
+    const isUrl = typeof content === 'string' && isValidUrl(content);
+    
+    // Determine media type using both message_type and URL analysis
+    isMediaUrl = isUrl;
+    isImageUrl = (messageType.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/i.test(content)) && isUrl;
+    isVideoUrl = (messageType.includes('video') || /\.(mp4|webm|ogg|mov)$/i.test(content)) && isUrl;
+    isAudioUrl = (messageType.includes('audio') || /\.(mp3|wav|ogg|m4a)$/i.test(content)) && isUrl;
+    
+    // Log for debugging
+    console.log('[SnippetCard] Processing snippet:', {
+      id: snippet.id,
+      content: content,
+      message_type: messageType,
+      isUrl,
+      isImageUrl,
+      isVideoUrl,
+      isAudioUrl
+    });
+  }
   
   // Determine message type for display
-  $: messageType = isImageUrl ? 'image' : 
-                   isVideoUrl ? 'video' : 
-                   isAudioUrl ? 'audio' :
-                   isMediaUrl ? 'media' : 'text';
-                   
-  // --- DEBUGGING --- 
-  $: console.log(`[SnippetCard] Content: ${snippet.content}, isImageUrl: ${isImageUrl}, isVideoUrl: ${isVideoUrl}, isAudioUrl: ${isAudioUrl}, isMediaUrl: ${isMediaUrl}, messageType: ${messageType}`);
-  
+  $: messageType = snippet.message_type?.toLowerCase() || 
+                   (isImageUrl ? 'image' : 
+                    isVideoUrl ? 'video' : 
+                    isAudioUrl ? 'audio' :
+                    isMediaUrl ? 'media' : 'text');
+
   // Message content preview text
   $: contentPreview = messageType === 'text' ? 
                       (snippet.content?.length > 100 ? snippet.content.substring(0, 100) + '...' : snippet.content) : 
                       `${messageType.charAt(0).toUpperCase() + messageType.slice(1)} message`;
+
+  // Function to get media URL (handles both direct URLs and potential object structures)
+  function getMediaUrl(content: any): string {
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && content !== null) {
+      // Check common media URL fields
+      return content.url || content.mediaUrl || content.media_url || content.link || '';
+    }
+    return '';
+  }
+
+  // Function to handle media load errors
+  function handleMediaError(event: Event) {
+    const target = event.target as HTMLElement;
+    target.style.display = 'none';
+    
+    // Show error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md';
+    errorDiv.textContent = 'Media failed to load. Click the link below to open in a new tab.';
+    target.parentElement?.appendChild(errorDiv);
+  }
 </script>
 
 <div class="card mb-4 animate-fade-in hover:translate-y-[-1px] transition-transform duration-200 bg-white dark:bg-brand-charcoal-gray/40 p-4 rounded-lg shadow-sm dark:shadow-md border border-gray-100 dark:border-brand-charcoal-gray/30">
@@ -114,21 +167,33 @@
         {#if isImageUrl}
           <div class="media-wrapper mb-2 overflow-hidden max-h-[300px] shadow-apple-sm hover:shadow-md transition-shadow duration-300 rounded-md">
             <img 
-              src={snippet.content} 
+              src={getMediaUrl(snippet.content)} 
               alt={snippet.caption || 'Image'} 
               class="w-full h-auto object-cover transform hover:scale-[1.01] transition-transform duration-300" 
               loading="lazy"
+              on:error={handleMediaError}
             >
           </div>
           {#if snippet.caption}
             <p class="text-xs italic mt-1 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
           {/if}
+          <!-- Always show link for direct access -->
+          <div class="mt-2">
+            <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
+               class="text-xs text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 inline-flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open image in new tab
+            </a>
+          </div>
         {:else if isVideoUrl}
           <div class="media-wrapper mb-2 overflow-hidden shadow-apple-sm hover:shadow-md transition-shadow duration-300 rounded-md">
             <video 
               controls 
-              src={snippet.content} 
+              src={getMediaUrl(snippet.content)} 
               class="w-full max-h-[300px]"
+              on:error={handleMediaError}
             >
               Your browser doesn't support video playback.
             </video>
@@ -136,27 +201,60 @@
           {#if snippet.caption}
             <p class="text-xs italic mt-1 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
           {/if}
+          <!-- Always show link for direct access -->
+          <div class="mt-2">
+            <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
+               class="text-xs text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 inline-flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open video in new tab
+            </a>
+          </div>
         {:else if isAudioUrl}
           <div class="media-wrapper mb-2 p-3 bg-brand-off-white dark:bg-brand-charcoal-gray/60 rounded-md overflow-hidden">
-            <audio controls src={snippet.content} class="w-full">
+            <audio 
+              controls 
+              src={getMediaUrl(snippet.content)} 
+              class="w-full"
+              on:error={handleMediaError}
+            >
               Your browser doesn't support audio playback.
             </audio>
             {#if snippet.caption}
               <p class="text-xs italic mt-2 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
             {/if}
           </div>
-        {:else if isMediaUrl}
-          <div class="media-wrapper mb-2 p-3 bg-brand-off-white dark:bg-brand-charcoal-gray/60 rounded-md overflow-hidden flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-brand-coral-orange dark:text-brand-light-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <a href={snippet.content} target="_blank" rel="noopener noreferrer" class="text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200">
-              {snippet.caption || 'View Attachment'}
+          <!-- Always show link for direct access -->
+          <div class="mt-2">
+            <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
+               class="text-xs text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 inline-flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open audio in new tab
             </a>
+          </div>
+        {:else if isMediaUrl}
+          <div class="media-wrapper mb-2 p-3 bg-brand-off-white dark:bg-brand-charcoal-gray/60 rounded-md overflow-hidden">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center flex-1 min-w-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-brand-coral-orange dark:text-brand-light-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="truncate">{snippet.caption || 'Media attachment'}</span>
+              </div>
+              <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
+                 class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
           </div>
         {:else}
           <!-- Text message -->
-          <p class="whitespace-pre-wrap">{snippet.content}</p>
+          <p class="whitespace-pre-wrap break-words">{snippet.content}</p>
           {#if snippet.caption}
             <p class="text-xs italic mt-2 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
           {/if}
