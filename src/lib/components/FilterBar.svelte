@@ -1,15 +1,22 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+  
   // Expect activeQuickFilter prop for two-way binding
-  export let activeQuickFilter = 'All Time';
+  export let activeQuickFilter: string = 'All Time';
   // startDate and endDate remain bound to App.svelte for manual range setting
   export let startDate: string | null = null;
   export let endDate: string | null = null;
+  export let loading: boolean = false;
+  export let searchQuery: string = '';
+  export let showGroupMessagesOnly: boolean = false;
   
   // Flag to show/hide the manual date range inputs
   let showDateRangeInputs = activeQuickFilter === 'Custom Range';
   
   // Mobile dropdown menu state
   let isDropdownOpen = false;
+
+  const dispatch = createEventDispatcher();
 
   const quickFilterOptions = ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'Custom Range'];
 
@@ -34,6 +41,10 @@
   function selectFilter(option: string) {
     activeQuickFilter = option;
     isDropdownOpen = false;
+  }
+
+  function handleFilter() {
+    dispatch('filter');
   }
 </script>
 

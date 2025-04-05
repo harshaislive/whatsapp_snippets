@@ -60,6 +60,7 @@
   let searchTimeout: ReturnType<typeof setTimeout>;
   let showGroupMessagesOnly = import.meta.env.VITE_DEFAULT_GROUP_MESSAGES_ONLY === 'true';
   let blockedJids: string[] = [];
+  let earliestDate: string | null = null;
 
   // --- Reactive State for Grouping ---
   let groupedSnippets: Record<string, Snippet[]> = {};
@@ -90,6 +91,34 @@
       console.error('Error fetching blocked JIDs:', error);
       // Don't show this error to users, just log it
       blockedJids = [];
+    }
+  }
+
+  // Function to format date in a readable way
+  function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  // Fetch earliest date on mount
+  async function fetchEarliestDate() {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_snippets')
+        .select('timestamp')
+        .order('timestamp', { ascending: true })
+        .limit(1);
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        earliestDate = data[0].timestamp;
+      }
+    } catch (error) {
+      console.error('Error fetching earliest date:', error);
     }
   }
 
@@ -398,24 +427,28 @@
       updateTheme(isDarkMode);
       
       // Listen for OS theme changes
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const themeChangeHandler = (event: MediaQueryListEvent) => {
         if (!localStorage.getItem('theme')) { // Only update if no theme is explicitly set
-            isDarkMode = event.matches;
-            updateTheme(isDarkMode);
+          isDarkMode = event.matches;
+          updateTheme(isDarkMode);
         }
-      });
+      };
+      mediaQuery.addEventListener('change', themeChangeHandler);
     }
     
     // Title setting, fetch, and subscription setup
     document.title = pageTitle;
+    fetchEarliestDate();
     fetchSnippets(1); // Fetch page 1 on initial load
     setupRealtimeSubscription();
 
-    // Cleanup function for subscription and theme listener
+    // Return cleanup function
     return () => {
       if (channel) supabase.removeChannel(channel);
       if (typeof window !== 'undefined') {
-        window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', () => {}); // Approximation, requires named function for perfect removal
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.removeEventListener('change', () => {});
       }
     };
   });
@@ -640,7 +673,25 @@
         </div>
       {/if}
 
-      <!-- Snippet List -->
+      <!-- Data availability info -->
+      {#if earliestDate}
+        <div class="text-xs text-brand-charcoal-gray/70 dark:text-gray-400 mb-4 text-right italic">
+          Data available from {formatDate(earliestDate)}
+        </div>
+      {/if}
+
+      <!-- Filter Bar -->
+      <FilterBar
+        bind:startDate
+        bind:endDate
+        bind:activeQuickFilter
+        bind:showGroupMessagesOnly
+        bind:searchQuery
+        {loading}
+        on:filter={() => fetchSnippets(1)}
+      />
+
+      <!-- Snippets List -->
       <div class="mt-6">
         <SnippetList {groupedSnippets} {sortedGroupLabels} {loading} />
       </div>
