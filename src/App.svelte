@@ -68,6 +68,15 @@
   // Add to top of script block
   let showMobileSearch = false;
   const quickFilterOptions = ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'Custom Range'];
+  let isDesktopDropdownOpen = false;
+  let dropdownNode: HTMLElement;
+
+  // Function to close dropdown when clicking outside
+  function handleClickOutside(event: MouseEvent) {
+    if (dropdownNode && !dropdownNode.contains(event.target as Node) && isDesktopDropdownOpen) {
+      isDesktopDropdownOpen = false;
+    }
+  }
 
   // ADDED handler function for pagination events
   function handlePageChange(event: CustomEvent<{ page: number }>) {
@@ -417,6 +426,9 @@
     fetchSnippets(1); // Fetch page 1 on initial load
     setupRealtimeSubscription();
 
+    // Add click outside listener for dropdown
+    document.addEventListener('click', handleClickOutside);
+
     // Return cleanup function
     return () => {
       if (channel) supabase.removeChannel(channel);
@@ -424,6 +436,8 @@
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.removeEventListener('change', () => {});
       }
+      // Remove click outside listener
+      document.removeEventListener('click', handleClickOutside);
     };
   });
 
@@ -542,19 +556,37 @@
             </div>
           </div>
           
-          <!-- Center: Search on desktop, hidden on mobile -->
-          <div class="hidden md:flex flex-1 items-center justify-center px-2 sm:px-8 space-x-4">
-            <!-- Date Filters (desktop only) - moved to center zone only -->
-            <div class="flex items-center space-x-2">
-              {#each quickFilterOptions as option}
-                <button
-                  type="button"
-                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out {activeQuickFilter === option ? 'bg-white dark:bg-brand-charcoal-gray/70 text-gray-800 dark:text-white shadow-sm dark:shadow-lg' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
-                  on:click={() => activeQuickFilter = option}
-                >
-                  {option}
-                </button>
-              {/each}
+          <!-- Center: Dropdown Filter on desktop, hidden on mobile -->
+          <div class="hidden md:flex flex-1 items-center justify-center px-2 sm:px-8">
+            <!-- Desktop Dropdown Filter -->
+            <div class="relative" bind:this={dropdownNode}>
+              <button 
+                type="button" 
+                class="flex items-center justify-between px-4 py-2 bg-white dark:bg-brand-charcoal-gray/70 text-gray-800 dark:text-white border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-forest-green dark:focus:ring-brand-light-blue w-40"
+                on:click|stopPropagation={() => isDesktopDropdownOpen = !isDesktopDropdownOpen}
+              >
+                <span class="truncate">{activeQuickFilter}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              
+              {#if isDesktopDropdownOpen}
+                <div transition:fade="{{ duration: 100 }}" class="absolute z-10 mt-1 w-full bg-white dark:bg-brand-dark-brown border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-lg max-h-56 overflow-y-auto backdrop-blur-none">
+                  {#each quickFilterOptions as option}
+                    <button
+                      type="button"
+                      class="block w-full text-left px-4 py-2 text-sm {activeQuickFilter === option ? 'bg-gray-100 dark:bg-brand-charcoal-gray text-brand-forest-green dark:text-brand-light-blue font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-charcoal-gray'}"
+                      on:click={() => {
+                        activeQuickFilter = option;
+                        isDesktopDropdownOpen = false;
+                      }}
+                    >
+                      {option}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
             </div>
           </div>
           
