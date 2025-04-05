@@ -175,7 +175,7 @@
             >
           </div>
           {#if snippet.caption}
-            <p class="text-xs italic mt-1 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
+            <p class="whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed">{snippet.caption}</p>
           {/if}
           <!-- Always show link for direct access -->
           <div class="mt-2">
@@ -197,24 +197,23 @@
               Your browser does not support the video tag.
             </video>
           </div>
-          <!-- Media caption and download link -->
-          {#if snippet.caption || isMediaUrl}
-            <div class="flex items-center text-sm text-gray-600 dark:text-gray-300 mt-2">
-              <div class="flex-1 min-w-0">
-                <span class="truncate">{snippet.caption || 'Media attachment'}</span>
-              </div>
-              <a 
-                href={getMediaUrl(snippet.content)} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                aria-label="Open media in new tab" 
-                class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            </div>
+          {#if snippet.caption}
+            <p class="whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed">{snippet.caption}</p>
           {/if}
+          <!-- Media caption and download link -->
+          <div class="mt-2">
+            <a 
+              href={getMediaUrl(snippet.content)} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              aria-label="Open media in new tab" 
+              class="text-xs text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 inline-flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open video in new tab
+            </a>
+          </div>
         {:else if isAudioUrl}
           <div class="media-wrapper mb-2 p-3 bg-brand-off-white dark:bg-brand-charcoal-gray/60 rounded-md overflow-hidden">
             <audio 
@@ -226,7 +225,7 @@
               Your browser doesn't support audio playback.
             </audio>
             {#if snippet.caption}
-              <p class="text-xs italic mt-2 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
+              <p class="whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed mt-2">{snippet.caption}</p>
             {/if}
           </div>
           <!-- Always show link for direct access -->
@@ -246,14 +245,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-brand-coral-orange dark:text-brand-light-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span class="truncate">{snippet.caption || 'Media attachment'}</span>
+                <span class="truncate whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed">{snippet.caption || 'Media attachment'}</span>
               </div>
-              <a 
-                href={getMediaUrl(snippet.content)} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                aria-label="Open media in new tab" 
-                class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
+              <a href={getMediaUrl(snippet.content)} target="_blank" rel="noopener noreferrer" 
+                 class="ml-2 text-brand-deep-blue hover:text-brand-coral-orange dark:text-brand-light-blue dark:hover:text-white transition-colors duration-200 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -262,9 +257,9 @@
           </div>
         {:else}
           <!-- Text message -->
-          <p class="whitespace-pre-wrap break-words">{snippet.content}</p>
+          <p class="whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed">{snippet.content}</p>
           {#if snippet.caption}
-            <p class="text-xs italic mt-2 text-brand-charcoal-gray dark:text-gray-400">{snippet.caption}</p>
+            <p class="whitespace-pre-wrap break-words text-brand-dark-earth dark:text-gray-200 text-sm leading-relaxed mt-2">{snippet.caption}</p>
           {/if}
         {/if}
       </div>
