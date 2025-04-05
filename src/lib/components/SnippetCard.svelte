@@ -1,7 +1,51 @@
 <script lang="ts">
   // Placeholder for SnippetCard component
   // Will receive a single 'snippet' object as a prop
+  import { onMount } from 'svelte';
+  import { user } from '../stores/authStore';
+  import { supabase } from '../supabaseClient';
+  import LikeButton from './LikeButton.svelte';
+  import CommentSection from './CommentSection.svelte';
+  import ShareButton from './ShareButton.svelte';
+  
   export let snippet: any; // Replace 'any' with a proper type later
+
+  // Social features state
+  let isLiked = false;
+  let likeCount = 0;
+  let commentCount = 0;
+  let commentExpanded = false;
+  
+  // Fetch like status and counts on mount
+  onMount(async () => {
+    if ($user) {
+      // Check if the current user has liked this snippet
+      const { data: likeData } = await supabase
+        .from('snippet_likes')
+        .select('id')
+        .eq('snippet_id', snippet.id)
+        .eq('user_id', $user.id)
+        .single();
+      
+      isLiked = !!likeData;
+    }
+    
+    // Get total like count
+    const { count: likes } = await supabase
+      .from('snippet_likes')
+      .select('id', { count: 'exact' })
+      .eq('snippet_id', snippet.id);
+      
+    likeCount = likes || 0;
+    
+    // Get total comment count
+    const { count: comments } = await supabase
+      .from('snippet_comments')
+      .select('id', { count: 'exact' })
+      .eq('snippet_id', snippet.id);
+      
+    commentCount = comments || 0;
+  });
 
   // Function to format timestamp
   function formatTimestamp(timestamp: string): string {
@@ -296,5 +340,29 @@
         </span>
       </div>
     </div>
+  </div>
+  
+  <!-- Social Features Bar -->
+  <div class="mt-4 pt-3 border-t border-gray-100 dark:border-brand-charcoal-gray/30 flex items-center space-x-6">
+    <!-- Like Button -->
+    <LikeButton 
+      snippetId={snippet.id} 
+      bind:isLiked={isLiked} 
+      bind:likeCount={likeCount} 
+    />
+    
+    <!-- Comment Section -->
+    <CommentSection 
+      snippetId={snippet.id} 
+      bind:commentCount={commentCount} 
+      bind:expanded={commentExpanded}
+      on:update={({ detail }) => commentCount = detail.count}
+    />
+    
+    <!-- Share Button -->
+    <ShareButton 
+      snippetId={snippet.id} 
+      snippetContent={snippet.content} 
+    />
   </div>
 </div> 
