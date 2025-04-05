@@ -60,7 +60,6 @@
   let searchTimeout: ReturnType<typeof setTimeout>;
   let showGroupMessagesOnly = import.meta.env.VITE_DEFAULT_GROUP_MESSAGES_ONLY === 'true';
   let blockedJids: string[] = [];
-  let earliestDate: string | null = null;
 
   // --- Reactive State for Grouping ---
   let groupedSnippets: Record<string, Snippet[]> = {};
@@ -91,34 +90,6 @@
       console.error('Error fetching blocked JIDs:', error);
       // Don't show this error to users, just log it
       blockedJids = [];
-    }
-  }
-
-  // Function to format date in a readable way
-  function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  }
-
-  // Fetch earliest date on mount
-  async function fetchEarliestDate() {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_snippets')
-        .select('timestamp')
-        .order('timestamp', { ascending: true })
-        .limit(1);
-
-      if (error) throw error;
-      if (data && data.length > 0) {
-        earliestDate = data[0].timestamp;
-      }
-    } catch (error) {
-      console.error('Error fetching earliest date:', error);
     }
   }
 
@@ -439,7 +410,6 @@
     
     // Title setting, fetch, and subscription setup
     document.title = pageTitle;
-    fetchEarliestDate();
     fetchSnippets(1); // Fetch page 1 on initial load
     setupRealtimeSubscription();
 
@@ -567,8 +537,24 @@
             </div>
           </div>
           
-          <!-- Center: Search -->
-          <div class="flex-1 flex justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end">
+          <!-- Center: Search and Filters -->
+          <div class="flex flex-1 items-center justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end space-x-4">
+            <!-- Date Filters (moved here) -->
+            <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
+
+            <!-- Group Messages Filter Toggle (moved here) -->
+            <label for="group-messages-toggle" class="flex-shrink-0 inline-flex items-center cursor-pointer">
+              <input 
+                id="group-messages-toggle" 
+                type="checkbox" 
+                bind:checked={showGroupMessagesOnly}
+                class="sr-only peer"
+              >
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
+              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 hidden xl:inline">Group Only</span>
+            </label>
+
+            <!-- Search Input -->
             <div class="w-full max-w-lg lg:max-w-xs">
               <label for="search" class="sr-only">Search snippets</label>
               <div class="relative">
@@ -628,31 +614,6 @@
       </div>
     </header>
 
-    <!-- Sub-header/Filter Area -->
-    <div class="sticky top-header z-20 bg-white shadow-sm dark:bg-brand-dark-brown/95 dark:border-b dark:border-brand-charcoal-gray/40">
-      <div class="container mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <!-- Filter Controls Section -->
-        <div class="space-y-4">
-          <!-- Date Filters -->
-          <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
-          
-          <!-- Group Messages Filter Toggle -->
-          <div class="flex w-full justify-start">
-            <label for="group-messages-toggle" class="inline-flex items-center cursor-pointer">
-              <input 
-                id="group-messages-toggle" 
-                type="checkbox" 
-                bind:checked={showGroupMessagesOnly}
-                class="sr-only peer"
-              >
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-forest-green dark:peer-focus:ring-brand-light-blue rounded-full peer dark:bg-brand-charcoal-gray/60 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-forest-green dark:peer-checked:bg-brand-light-blue"></div>
-              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Group Messages Only</span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <main class="container mx-auto max-w-7xl p-4 pt-6 sm:p-6 lg:px-8 font-body">
       <!-- Toast Notification for Loading -->
       {#if loading}
@@ -673,30 +634,12 @@
         </div>
       {/if}
 
-      <!-- Data availability info -->
-      {#if earliestDate}
-        <div class="text-xs text-brand-charcoal-gray/70 dark:text-gray-400 mb-4 text-right italic">
-          Data available from {formatDate(earliestDate)}
-        </div>
-      {/if}
-
-      <!-- Filter Bar -->
-      <FilterBar
-        bind:startDate
-        bind:endDate
-        bind:activeQuickFilter
-        bind:showGroupMessagesOnly
-        bind:searchQuery
-        {loading}
-        on:filter={() => fetchSnippets(1)}
-      />
-
       <!-- Snippets List -->
       <div class="mt-6">
         <SnippetList {groupedSnippets} {sortedGroupLabels} {loading} />
       </div>
       
-      <!-- ADDED Pagination Component -->
+      <!-- Pagination Component -->
       {#if !loading && totalPages > 0}
          <Pagination {currentPage} {totalPages} on:changePage={handlePageChange} />
       {/if}
