@@ -87,9 +87,11 @@
 
       // Apply date filters if set
       if (startDate) {
+        // Add time to start date to include the entire day
         query = query.gte('timestamp', `${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
+        // Add time to end date to include the entire day
         query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
       }
       
@@ -347,18 +349,18 @@
       newStartDate = todayStr;
       newEndDate = todayStr;
     } else if (activeQuickFilter === 'Yesterday') {
-      const yesterday = new Date();
+      const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
       newStartDate = yesterday.toISOString().split('T')[0];
       newEndDate = newStartDate;
     } else if (activeQuickFilter === 'Last 7 Days') {
-      const start = new Date();
-      start.setDate(today.getDate() - 7);
+      const start = new Date(today);
+      start.setDate(today.getDate() - 6); // -6 because we want to include today
       newStartDate = start.toISOString().split('T')[0];
       newEndDate = todayStr;
     } else if (activeQuickFilter === 'Last 30 Days') {
-      const start = new Date();
-      start.setDate(today.getDate() - 30);
+      const start = new Date(today);
+      start.setDate(today.getDate() - 29); // -29 because we want to include today
       newStartDate = start.toISOString().split('T')[0];
       newEndDate = todayStr;
     } else if (activeQuickFilter === 'Custom Range') {
