@@ -52,11 +52,11 @@
     </button>
     
     {#if isDropdownOpen}
-      <div class="absolute z-10 mt-1 w-full bg-white dark:bg-brand-charcoal-gray/80 border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-lg max-h-56 overflow-y-auto">
+      <div class="absolute z-10 mt-1 w-full bg-white dark:bg-brand-dark-brown border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-lg max-h-56 overflow-y-auto backdrop-blur-none">
         {#each quickFilterOptions as option}
           <button
             type="button"
-            class="block w-full text-left px-4 py-2 text-sm {activeQuickFilter === option ? 'bg-gray-100 dark:bg-brand-charcoal-gray text-brand-forest-green dark:text-brand-light-blue font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-charcoal-gray/60'}"
+            class="block w-full text-left px-4 py-2 text-sm {activeQuickFilter === option ? 'bg-gray-100 dark:bg-brand-charcoal-gray text-brand-forest-green dark:text-brand-light-blue font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-charcoal-gray'}"
             on:click={() => selectFilter(option)}
           >
             {option}

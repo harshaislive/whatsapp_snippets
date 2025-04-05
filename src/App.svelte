@@ -67,6 +67,8 @@
   function handlePageChange(event: CustomEvent<{ page: number }>) {
     const newPage = event.detail.page;
     console.log(`[App] Page change event received. Fetching page: ${newPage}`);
+    // Scroll to top before fetching new page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     // Use existing date range filters when changing page
     fetchSnippets(newPage, startDate, endDate);
   }
@@ -503,8 +505,8 @@
           </div>
           
           <!-- Center: Search -->
-          <div class="flex-1 flex justify-center px-8 lg:ml-6 lg:justify-end">
-            <div class="max-w-lg w-full lg:max-w-xs">
+          <div class="flex-1 flex justify-center px-2 sm:px-8 lg:ml-6 lg:justify-end">
+            <div class="w-full max-w-lg lg:max-w-xs">
               <label for="search" class="sr-only">Search snippets</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -515,7 +517,7 @@
                 <input 
                   id="search" 
                   name="search" 
-                  class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-forest-green focus:border-brand-forest-green sm:text-sm dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:placeholder-gray-400 dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue" 
+                  class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-forest-green focus:border-brand-forest-green text-sm dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white dark:placeholder-gray-400 dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue" 
                   placeholder="Search snippets..." 
                   type="search"
                   bind:value={searchQuery} 
