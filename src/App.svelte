@@ -42,6 +42,8 @@
   // --- State ---
   let startDate: string | null = null;
   let endDate: string | null = null;
+  let selectedGroupName: string | null = null;
+  let availableGroups: string[] = [];
   let snippets: Snippet[] = [];
   let loading: boolean = true;
   let errorMessage: string | null = null;
@@ -107,6 +109,27 @@
   }
 
   // --- Functions ---
+  async function fetchAvailableGroups() {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_snippets')
+        .select('group_name')
+        .eq('is_group', true)
+        .not('group_name', 'is', null);
+
+      if (error) {
+        console.error("Error fetching available groups:", error);
+        return;
+      }
+
+      const uniqueGroups = [...new Set(data?.map(item => item.group_name).filter(Boolean))];
+      availableGroups = uniqueGroups.sort();
+      console.log("Available groups fetched:", availableGroups);
+    } catch (error: any) {
+      console.error("Error fetching available groups:", error);
+    }
+  }
+
   async function fetchSnippets(page: number, fetchStartDate: string | null = null, fetchEndDate: string | null = null) {
     // Determine the effective dates to use for this specific fetch operation
     // Prioritize passed parameters, fall back to component state
@@ -152,6 +175,12 @@
       if (effectiveEndDate) {
         console.log('[DEBUG] Applying end date filter');
         query = query.lte('timestamp', `${effectiveEndDate}T23:59:59.999Z`);
+      }
+
+      // Apply group filter if selected
+      if (selectedGroupName) {
+        console.log('[DEBUG] Applying group filter:', selectedGroupName);
+        query = query.eq('group_name', selectedGroupName);
       }
 
       // Apply search query filter (if debounced query exists)
@@ -423,6 +452,7 @@
     
     // Title setting, fetch, and subscription setup
     document.title = pageTitle;
+    fetchAvailableGroups(); // Fetch available groups first
     fetchSnippets(1); // Fetch page 1 on initial load
     setupRealtimeSubscription();
 
@@ -510,6 +540,15 @@
     // Pass the current state dates to the fetch function for page 1
     fetchSnippets(currentPage, startDate, endDate); 
     previousShowGroupMessagesOnly = showGroupMessagesOnly; // Update previous state
+  }
+
+  // Refetch when group name filter changes
+  let previousSelectedGroupName: string | null | undefined = undefined;
+  $: if (initialLoadComplete && selectedGroupName !== previousSelectedGroupName) {
+    console.log(`[DEBUG] Group name filter changed to ${selectedGroupName || 'All Groups'}. Refetching page 1`);
+    currentPage = 1; // Reset to page 1
+    fetchSnippets(currentPage, startDate, endDate);
+    previousSelectedGroupName = selectedGroupName; // Update previous state
   }
   
   // --- Search Logic ---
@@ -711,7 +750,7 @@
       <!-- Mobile Filters (always shown on mobile) -->
       <div class="md:hidden bg-white dark:bg-brand-dark-brown border-t border-gray-200 dark:border-brand-charcoal-gray/40 py-2 px-4">
         <!-- Mobile Date Filters -->
-        <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} />
+        <FilterBar bind:activeQuickFilter={activeQuickFilter} bind:startDate={startDate} bind:endDate={endDate} bind:selectedGroupName={selectedGroupName} availableGroups={availableGroups} />
         
         <!-- Mobile Group Messages Toggle -->
         <div class="mt-2">
