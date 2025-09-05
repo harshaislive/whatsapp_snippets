@@ -63,6 +63,7 @@
 
       const uniqueGroups = [...new Set(data?.map(item => item.group_name).filter(Boolean))];
       availableGroups = uniqueGroups.sort();
+      console.log("Available groups fetched:", availableGroups);
     } catch (error: any) {
       console.error("Error fetching available groups:", error);
     }

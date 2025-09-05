@@ -10,6 +10,9 @@
   export let selectedGroupName: string | null = null;
   export let availableGroups: string[] = [];
   
+  // Debug logging
+  $: console.log("FilterBar availableGroups:", availableGroups);
+  
   // Flag to show/hide the manual date range inputs
   let showDateRangeInputs = activeQuickFilter === 'Custom Range';
   
