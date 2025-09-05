@@ -6,12 +6,16 @@
   // startDate and endDate remain bound to App.svelte for manual range setting
   export let startDate: string | null = null;
   export let endDate: string | null = null;
+  // Group filter prop
+  export let selectedGroupName: string | null = null;
+  export let availableGroups: string[] = [];
   
   // Flag to show/hide the manual date range inputs
   let showDateRangeInputs = activeQuickFilter === 'Custom Range';
   
   // Mobile dropdown menu state
   let isDropdownOpen = false;
+  let isGroupDropdownOpen = false;
 
   const dispatch = createEventDispatcher();
 
@@ -38,6 +42,13 @@
   function selectFilter(option: string) {
     activeQuickFilter = option;
     isDropdownOpen = false;
+  }
+
+  // Function to handle group selection
+  function selectGroup(groupName: string | null) {
+    selectedGroupName = groupName;
+    isGroupDropdownOpen = false;
+    handleFilter();
   }
 
   function handleFilter() {
@@ -113,6 +124,48 @@
           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-forest-green focus:border-brand-forest-green dark:focus:ring-brand-light-blue dark:focus:border-brand-light-blue text-gray-700 bg-white dark:bg-brand-charcoal-gray/40 dark:border-brand-charcoal-gray/50 dark:text-white sm:text-sm"
           on:change={handleFilter}
         >
+      </div>
+    </div>
+  {/if}
+
+  <!-- Group Filter Dropdown -->
+  {#if availableGroups.length > 0}
+    <div class="w-full md:w-auto">
+      <label for="group-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Filter by Group
+      </label>
+      <div class="relative">
+        <button 
+          type="button" 
+          class="flex items-center justify-between w-full md:w-64 px-4 py-2 bg-white dark:bg-brand-charcoal-gray/70 text-gray-800 dark:text-white border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-forest-green dark:focus:ring-brand-light-blue"
+          on:click={() => isGroupDropdownOpen = !isGroupDropdownOpen}
+        >
+          <span class="truncate">{selectedGroupName || 'All Groups'}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+        
+        {#if isGroupDropdownOpen}
+          <div class="absolute z-20 mt-1 w-full bg-white dark:bg-brand-dark-brown border border-gray-300 dark:border-brand-charcoal-gray/50 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <button
+              type="button"
+              class="block w-full text-left px-4 py-2 text-sm {selectedGroupName === null ? 'bg-gray-100 dark:bg-brand-charcoal-gray text-brand-forest-green dark:text-brand-light-blue font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-charcoal-gray'}"
+              on:click={() => selectGroup(null)}
+            >
+              All Groups
+            </button>
+            {#each availableGroups as groupName}
+              <button
+                type="button"
+                class="block w-full text-left px-4 py-2 text-sm {selectedGroupName === groupName ? 'bg-gray-100 dark:bg-brand-charcoal-gray text-brand-forest-green dark:text-brand-light-blue font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-charcoal-gray'}"
+                on:click={() => selectGroup(groupName)}
+              >
+                {groupName}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
     </div>
   {/if}

@@ -24,6 +24,8 @@
     content: string;
     caption?: string | null;
     message_type?: string;
+    group_name?: string | null;
+    is_group?: boolean;
   }
 
   // Type guard to check if an object is a valid Snippet
@@ -34,17 +36,42 @@
   // --- State ---
   let startDate: string | null = null;
   let endDate: string | null = null;
+  let selectedGroupName: string | null = null;
+  let availableGroups: string[] = [];
   let snippets: Snippet[] = [];
+  let groupedSnippets: Record<string, Snippet[]> = {};
+  let sortedGroupLabels: string[] = [];
   let loading: boolean = true;
   let errorMessage: string | null = null;
   let channel: RealtimeChannel | null = null;
   let initialLoadComplete = false; // Flag to prevent refetch on mount
+  let activeQuickFilter: string = 'All Time';
 
   // --- Functions ---
+  async function fetchAvailableGroups() {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_snippets')
+        .select('group_name')
+        .eq('is_group', true)
+        .not('group_name', 'is', null);
+
+      if (error) {
+        console.error("Error fetching available groups:", error);
+        return;
+      }
+
+      const uniqueGroups = [...new Set(data?.map(item => item.group_name).filter(Boolean))];
+      availableGroups = uniqueGroups.sort();
+    } catch (error: any) {
+      console.error("Error fetching available groups:", error);
+    }
+  }
+
   async function fetchSnippets() {
     loading = true;
     errorMessage = null;
-    console.log(`Fetching snippets between ${startDate || 'beginning'} and ${endDate || 'end'}`);
+    console.log(`Fetching snippets between ${startDate || 'beginning'} and ${endDate || 'end'} for group: ${selectedGroupName || 'all'}`);
 
     try {
       let query = supabase
@@ -57,6 +84,9 @@
       }
       if (endDate) {
         query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
+      }
+      if (selectedGroupName) {
+        query = query.eq('group_name', selectedGroupName);
       }
 
       const { data, error } = await query.returns<Snippet[]>();
@@ -140,6 +170,7 @@
 
   // --- Lifecycle ---
   onMount(() => {
+    fetchAvailableGroups();
     fetchSnippets();
     setupRealtimeSubscription();
 
@@ -152,16 +183,45 @@
   });
 
   // --- Reactive Statements ---
-  // Refetch when date filters change, but only *after* the initial fetch has completed.
+  // Refetch when date or group filters change, but only *after* the initial fetch has completed.
   $: {
-     if (initialLoadComplete && (startDate || endDate)) {
-        console.log("Date filter changed, refetching...");
+     if (initialLoadComplete && (startDate || endDate || selectedGroupName !== null)) {
+        console.log("Filters changed, refetching...");
         fetchSnippets();
-     } else if (initialLoadComplete && startDate === null && endDate === null) {
+     } else if (initialLoadComplete && startDate === null && endDate === null && selectedGroupName === null) {
         // Handle case where filters are cleared - refetch all
-        console.log("Date filters cleared, refetching all...");
+        console.log("All filters cleared, refetching all...");
         fetchSnippets();
      }
+  }
+
+  // Group snippets by date
+  $: {
+    if (activeQuickFilter === 'All Time') {
+      groupedSnippets = { '__ALL__': snippets };
+      sortedGroupLabels = ['__ALL__'];
+    } else {
+      const groups = snippets.reduce((groups, snippet) => {
+        try {
+          const date = new Date(snippet.timestamp);
+          const label = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+          if (!groups[label]) {
+            groups[label] = [];
+          }
+          groups[label].push(snippet);
+        } catch (e) {
+          console.error("Error parsing date for grouping:", snippet.timestamp, e);
+        }
+        return groups;
+      }, {} as Record<string, Snippet[]>);
+
+      groupedSnippets = groups;
+      sortedGroupLabels = Object.keys(groupedSnippets).sort((a, b) => {
+        if (a === '__ALL__') return -1;
+        if (b === '__ALL__') return 1;
+        return new Date(b).getTime() - new Date(a).getTime();
+      });
+    }
   }
 
 </script>
@@ -172,7 +232,7 @@
   </h1>
 
   <!-- Filter Bar -->
-  <FilterBar bind:startDate bind:endDate />
+  <FilterBar bind:startDate bind:endDate bind:selectedGroupName bind:activeQuickFilter {availableGroups} />
 
   <!-- Error Message Display -->
   {#if errorMessage}
@@ -183,6 +243,6 @@
   {/if}
 
   <!-- Snippet List -->
-  <SnippetList {snippets} {loading} />
+  <SnippetList {groupedSnippets} {sortedGroupLabels} {loading} />
 
 </main> 
