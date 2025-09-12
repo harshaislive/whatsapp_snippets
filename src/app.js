@@ -11,6 +11,7 @@ dotenv.config()
 
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_KEY
+const supabaseBucket = process.env.SUPABASE_BUCKET || 'whatsapp-media'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 const getMessageType = (message) => {
@@ -30,7 +31,7 @@ const getMessageType = (message) => {
 const uploadMediaToSupabase = async (buffer, fileName, mimeType) => {
   try {
     const { data, error } = await supabase.storage
-      .from('whatsapp-media')
+      .from(supabaseBucket)
       .upload(fileName, buffer, {
         contentType: mimeType,
         upsert: false
@@ -42,7 +43,7 @@ const uploadMediaToSupabase = async (buffer, fileName, mimeType) => {
     }
     
     const { data: { publicUrl } } = supabase.storage
-      .from('whatsapp-media')
+      .from(supabaseBucket)
       .getPublicUrl(fileName)
     
     return publicUrl
