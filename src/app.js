@@ -204,15 +204,16 @@ const main = async () => {
     database: adapterDB,
   })
 
-  const server = httpServer(3008)
+  const port = process.env.PORT || 3008
+  const server = httpServer(port)
 
   // Add health check endpoint for Coolify
   server.get('/health', (req, res) => {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
   })
 
-  console.log('🚀 Bot server running on http://localhost:3008')
-  console.log('🔍 Health check available at http://localhost:3008/health')
+  console.log(`🚀 Bot server running on http://localhost:${port}`)
+  console.log(`🔍 Health check available at http://localhost:${port}/health`)
 }
 
 main()
