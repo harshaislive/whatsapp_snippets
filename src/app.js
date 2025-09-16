@@ -2,6 +2,7 @@ import { createBot, createProvider, createFlow, addKeyword, EVENTS } from '@buil
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { MemoryDB } from '@builderbot/bot'
 import { createClient } from '@supabase/supabase-js'
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 import dotenv from 'dotenv'
 import { writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
@@ -89,17 +90,26 @@ const saveToSupabase = async (ctx, provider) => {
   // Handle media upload
   if (['image', 'video', 'document', 'audio'].includes(messageType)) {
     try {
-      const buffer = await provider.downloadMediaMessage(ctx)
-      if (buffer) {
-        const fileExtension = getFileExtension(ctx.message, messageType)
-        const fileName = `${uuidv4()}_${timestamp.replace(/[:.]/g, '-')}.${fileExtension}`
-        const mimeType = getMimeType(ctx.message, messageType)
-        
-        mediaUrl = await uploadMediaToSupabase(buffer, fileName, mimeType)
-        console.log(`📁 Media uploaded: ${fileName} -> ${mediaUrl}`)
+      const messageContent = ctx.message[Object.keys(ctx.message)[0]]
+      if (messageContent) {
+        const stream = await downloadContentFromMessage(messageContent, messageType)
+        let buffer = Buffer.from([])
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk])
+        }
+
+        if (buffer.length > 0) {
+          const fileExtension = getFileExtension(ctx.message, messageType)
+          const fileName = `${uuidv4()}.${fileExtension}`
+          const mimeType = getMimeType(ctx.message, messageType)
+
+          mediaUrl = await uploadMediaToSupabase(buffer, fileName, mimeType)
+          console.log(`📁 Media uploaded: ${fileName} -> ${mediaUrl}`)
+        }
       }
     } catch (error) {
       console.error('Media download/upload error:', error)
+      mediaUrl = 'media_upload_failed'
     }
   }
 
@@ -107,13 +117,12 @@ const saveToSupabase = async (ctx, provider) => {
     sender_jid: senderJid,
     timestamp,
     message_type: messageType,
-    content,
+    content: mediaUrl || content, // Use mediaUrl for media, content for text
     sender_name: senderName,
     raw_message: rawMessage,
     caption,
     group_name: groupName,
     is_group: isGroup,
-    media_url: mediaUrl,
   })
 
   if (error) {
