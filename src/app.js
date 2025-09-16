@@ -204,7 +204,10 @@ const locationFlow = addKeyword(EVENTS.LOCATION)
 
 const main = async () => {
   const adapterFlow = createFlow([textFlow, mediaFlow, documentFlow, voiceFlow, locationFlow])
-  const adapterProvider = createProvider(BaileysProvider)
+  const adapterProvider = createProvider(BaileysProvider, {
+    writeMyself: 'both',
+    phoneNumber: process.env.PHONE_NUMBER || undefined,
+  })
   const adapterDB = new MemoryDB()
 
   const { httpServer } = await createBot({
@@ -218,11 +221,26 @@ const main = async () => {
 
   // Add health check endpoint for Coolify
   server.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      whatsapp: 'waiting for connection'
+    })
   })
 
   console.log(`🚀 Bot server running on http://localhost:${port}`)
   console.log(`🔍 Health check available at http://localhost:${port}/health`)
+
+  // Keep process alive even if WhatsApp isn't connected
+  process.on('SIGTERM', () => {
+    console.log('Received SIGTERM, shutting down gracefully')
+    process.exit(0)
+  })
+
+  process.on('SIGINT', () => {
+    console.log('Received SIGINT, shutting down gracefully')
+    process.exit(0)
+  })
 }
 
-main()
+main().catch(console.error)
