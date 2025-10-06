@@ -50,20 +50,23 @@
   // --- Functions ---
   async function fetchAvailableGroups() {
     try {
+      // Use a more efficient query to get distinct group names
       const { data, error } = await supabase
         .from('whatsapp_snippets')
         .select('group_name')
         .eq('is_group', true)
-        .not('group_name', 'is', null);
+        .not('group_name', 'is', null)
+        .order('group_name', { ascending: true });
 
       if (error) {
         console.error("Error fetching available groups:", error);
         return;
       }
 
-      const uniqueGroups = [...new Set(data?.map(item => item.group_name).filter(Boolean))];
+      // Extract unique group names
+      const uniqueGroups = [...new Set(data?.map(item => item.group_name).filter(Boolean) as string[])];
       availableGroups = uniqueGroups.sort();
-      console.log("Available groups fetched:", availableGroups);
+      console.log(`Available groups fetched: ${availableGroups.length} groups`, availableGroups);
     } catch (error: any) {
       console.error("Error fetching available groups:", error);
     }
@@ -157,9 +160,12 @@
       .subscribe((status: `${REALTIME_SUBSCRIBE_STATES}` | 'error' | 'ok' , err?: Error) => {
          if (status === 'SUBSCRIBED') {
             console.log('Successfully subscribed to real-time updates!');
+            // Clear any previous error messages
+            errorMessage = null;
          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'error') {
             console.error(`Subscription error: ${status}`, err);
-            errorMessage = `Real-time connection error: ${err?.message || 'Unknown error'}. Try refreshing.`;
+            // Don't show persistent error, just log it
+            console.warn(`Real-time connection issue: ${err?.message || 'Unknown error'}. Will attempt to reconnect.`);
          } else {
             // status can be 'CLOSED', 'SUBSCRIPTION_ERROR', 'ok'
             console.log(`Subscription status: ${status}`);
@@ -186,15 +192,14 @@
   // --- Reactive Statements ---
   // Refetch when date or group filters change, but only *after* the initial fetch has completed.
   $: {
-     if (initialLoadComplete && (startDate || endDate || selectedGroupName !== null)) {
+     if (initialLoadComplete) {
         console.log("Filters changed, refetching...");
-        fetchSnippets();
-     } else if (initialLoadComplete && startDate === null && endDate === null && selectedGroupName === null) {
-        // Handle case where filters are cleared - refetch all
-        console.log("All filters cleared, refetching all...");
         fetchSnippets();
      }
   }
+
+  // Track filter changes separately for the reactive statement
+  $: startDate, endDate, selectedGroupName;
 
   // Group snippets by date
   $: {

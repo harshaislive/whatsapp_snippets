@@ -47,6 +47,53 @@
   function selectFilter(option: string) {
     activeQuickFilter = option;
     isDropdownOpen = false;
+    applyQuickFilter(option);
+  }
+
+  // Function to apply quick filter date ranges
+  function applyQuickFilter(option: string) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    switch(option) {
+      case 'All Time':
+        startDate = null;
+        endDate = null;
+        break;
+      case 'Today':
+        startDate = formatDateForInput(today);
+        endDate = formatDateForInput(today);
+        break;
+      case 'Yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        startDate = formatDateForInput(yesterday);
+        endDate = formatDateForInput(yesterday);
+        break;
+      case 'Last 7 Days':
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        startDate = formatDateForInput(sevenDaysAgo);
+        endDate = formatDateForInput(today);
+        break;
+      case 'Last 30 Days':
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        startDate = formatDateForInput(thirtyDaysAgo);
+        endDate = formatDateForInput(today);
+        break;
+      case 'Custom Range':
+        // Don't change dates, let user set them manually
+        break;
+    }
+  }
+
+  // Helper to format date for input (YYYY-MM-DD)
+  function formatDateForInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   // Function to handle group selection
@@ -98,15 +145,17 @@
         <button
           type="button"
           class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out {activeQuickFilter === option ? 'bg-white dark:bg-brand-charcoal-gray/70 text-gray-800 dark:text-white shadow-sm dark:shadow-lg' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
-          on:click={() => activeQuickFilter = option}
+          on:click={() => selectFilter(option)}
         >
           {option}
         </button>
       {/each}
     </div>
+  </div>
 
-    <!-- Desktop Group Filter Dropdown -->
-    {#if availableGroups.length > 0}
+  <!-- Desktop Group Filter Dropdown (visible on large screens) -->
+  {#if availableGroups.length > 0}
+    <div class="hidden lg:block">
       <div class="relative">
         <button
           type="button"
@@ -140,8 +189,8 @@
           </div>
         {/if}
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   <!-- Custom Date Range Inputs -->
   {#if activeQuickFilter === 'Custom Range'}
