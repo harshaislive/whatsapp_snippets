@@ -151,11 +151,9 @@
         </button>
       {/each}
     </div>
-  </div>
 
-  <!-- Desktop Group Filter Dropdown (visible on large screens) -->
-  {#if availableGroups.length > 0}
-    <div class="hidden lg:block">
+    <!-- Desktop Group Filter Dropdown -->
+    {#if availableGroups.length > 0}
       <div class="relative">
         <button
           type="button"
@@ -189,8 +187,8 @@
           </div>
         {/if}
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   <!-- Custom Date Range Inputs -->
   {#if activeQuickFilter === 'Custom Range'}
