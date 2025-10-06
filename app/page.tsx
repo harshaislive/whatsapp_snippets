@@ -2,25 +2,39 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase, Snippet } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
+import { Login } from "@/components/Login";
 import { FilterBar } from "@/components/FilterBar";
 import { SnippetCard } from "@/components/SnippetCard";
+import { Pagination } from "@/components/Pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, MessageSquare, LogOut } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 
+const ITEMS_PER_PAGE = 50;
+
 export default function Home() {
+  const { user, loading: authLoading, signOut } = useAuth();
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [availableGroups, setAvailableGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
+  // Calculate total pages
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
   // Fetch available groups
   const fetchGroups = useCallback(async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from("whatsapp_snippets")
@@ -37,57 +51,89 @@ export default function Home() {
       ].sort();
 
       setAvailableGroups(uniqueGroups);
-      console.log(`Fetched ${uniqueGroups.length} groups:`, uniqueGroups);
+      console.log(`Fetched ${uniqueGroups.length} groups`);
     } catch (err) {
       console.error("Error fetching groups:", err);
     }
-  }, []);
+  }, [user]);
 
-  // Fetch snippets with filters
-  const fetchSnippets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch total count for pagination
+  const fetchTotalCount = useCallback(async () => {
+    if (!user) return;
 
     try {
       let query = supabase
         .from("whatsapp_snippets")
-        .select("*")
-        .order("timestamp", { ascending: false });
+        .select("*", { count: "exact", head: true });
 
       if (startDate) {
-        const start = startOfDay(startDate).toISOString();
-        query = query.gte("timestamp", start);
+        query = query.gte("timestamp", startOfDay(startDate).toISOString());
       }
-
       if (endDate) {
-        const end = endOfDay(endDate).toISOString();
-        query = query.lte("timestamp", end);
+        query = query.lte("timestamp", endOfDay(endDate).toISOString());
+      }
+      if (selectedGroup) {
+        query = query.eq("group_name", selectedGroup);
       }
 
+      const { count, error } = await query;
+      if (error) throw error;
+
+      setTotalCount(count || 0);
+    } catch (err) {
+      console.error("Error fetching count:", err);
+    }
+  }, [user, startDate, endDate, selectedGroup]);
+
+  // Fetch snippets with filters and pagination
+  const fetchSnippets = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      let query = supabase
+        .from("whatsapp_snippets")
+        .select("*")
+        .order("timestamp", { ascending: false })
+        .range(from, to);
+
+      if (startDate) {
+        query = query.gte("timestamp", startOfDay(startDate).toISOString());
+      }
+      if (endDate) {
+        query = query.lte("timestamp", endOfDay(endDate).toISOString());
+      }
       if (selectedGroup) {
         query = query.eq("group_name", selectedGroup);
       }
 
       const { data, error } = await query.returns<Snippet[]>();
-
       if (error) throw error;
 
       setSnippets(data || []);
-      console.log(
-        `Fetched ${data?.length || 0} snippets with filters:`,
-        { startDate, endDate, selectedGroup }
-      );
+      console.log(`Fetched ${data?.length || 0} snippets for page ${currentPage}`);
     } catch (err) {
       console.error("Error fetching snippets:", err);
-      setError(`Failed to fetch snippets: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(
+        `Failed to fetch snippets: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
       setSnippets([]);
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, selectedGroup]);
+  }, [user, currentPage, startDate, endDate, selectedGroup]);
 
   // Setup realtime subscription
   useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
       .channel("whatsapp_snippets_realtime")
       .on(
@@ -101,16 +147,19 @@ export default function Home() {
           console.log("New snippet received:", payload.new);
           const newSnippet = payload.new as Snippet;
 
-          // Check if snippet matches current filters
-          const snippetDate = new Date(newSnippet.timestamp);
-          const matchesDateFilter =
-            (!startDate || snippetDate >= startOfDay(startDate)) &&
-            (!endDate || snippetDate <= endOfDay(endDate));
-          const matchesGroupFilter =
-            !selectedGroup || newSnippet.group_name === selectedGroup;
+          // Check if snippet matches current filters and is on page 1
+          if (currentPage === 1) {
+            const snippetDate = new Date(newSnippet.timestamp);
+            const matchesDateFilter =
+              (!startDate || snippetDate >= startOfDay(startDate)) &&
+              (!endDate || snippetDate <= endOfDay(endDate));
+            const matchesGroupFilter =
+              !selectedGroup || newSnippet.group_name === selectedGroup;
 
-          if (matchesDateFilter && matchesGroupFilter) {
-            setSnippets((prev) => [newSnippet, ...prev]);
+            if (matchesDateFilter && matchesGroupFilter) {
+              setSnippets((prev) => [newSnippet, ...prev].slice(0, ITEMS_PER_PAGE));
+              setTotalCount((prev) => prev + 1);
+            }
           }
         }
       )
@@ -121,13 +170,21 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [startDate, endDate, selectedGroup]);
+  }, [user, currentPage, startDate, endDate, selectedGroup]);
 
-  // Initial load
+  // Fetch data when dependencies change
   useEffect(() => {
-    fetchGroups();
-    fetchSnippets();
-  }, [fetchGroups, fetchSnippets]);
+    if (user) {
+      fetchGroups();
+      fetchTotalCount();
+      fetchSnippets();
+    }
+  }, [user, fetchGroups, fetchTotalCount, fetchSnippets]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [startDate, endDate, selectedGroup]);
 
   // Group snippets by date
   const groupedSnippets = snippets.reduce((groups, snippet) => {
@@ -143,11 +200,28 @@ export default function Home() {
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
   );
 
+  // Show login if not authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <main className="container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <h1 className="text-4xl font-bold text-center mb-8">
-        WhatsApp Snippets
-      </h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-bold">WhatsApp Snippets</h1>
+        <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
+      </div>
 
       <FilterBar
         startDate={startDate}
@@ -182,20 +256,28 @@ export default function Home() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {dateLabels.map((dateLabel) => (
-            <div key={dateLabel}>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 sticky top-0 bg-background py-2 z-10 border-b">
-                {dateLabel}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {groupedSnippets[dateLabel].map((snippet) => (
-                  <SnippetCard key={snippet.id} snippet={snippet} />
-                ))}
+        <>
+          <div className="space-y-8">
+            {dateLabels.map((dateLabel) => (
+              <div key={dateLabel}>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 sticky top-0 bg-background py-2 z-10 border-b">
+                  {dateLabel}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {groupedSnippets[dateLabel].map((snippet) => (
+                    <SnippetCard key={snippet.id} snippet={snippet} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </main>
   );
