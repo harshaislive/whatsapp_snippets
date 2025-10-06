@@ -191,11 +191,15 @@
 
   // --- Reactive Statements ---
   // Refetch when date or group filters change, but only *after* the initial fetch has completed.
-  $: if (initialLoadComplete) {
-    // This will re-run whenever startDate, endDate, or selectedGroupName changes
-    startDate; endDate; selectedGroupName; // Track these dependencies
-    console.log("Filters changed, refetching...", { startDate, endDate, selectedGroupName });
-    fetchSnippets();
+  $: {
+    if (initialLoadComplete) {
+      // Access the variables to create dependencies
+      void startDate;
+      void endDate;
+      void selectedGroupName;
+      console.log("Filters changed, refetching...", { startDate, endDate, selectedGroupName });
+      fetchSnippets();
+    }
   }
 
   // Group snippets by date
