@@ -39,7 +39,6 @@ export default function Home() {
       const { data, error } = await supabase
         .from("whatsapp_snippets")
         .select("group_name")
-        .eq("is_group", true)
         .not("group_name", "is", null);
 
       if (error) throw error;
