@@ -74,7 +74,10 @@ export default function Home() {
         return;
       }
 
-      const uniqueGroups = (data || []).sort();
+      // RPC returns array of objects with group_name property, extract the strings
+      const uniqueGroups = (data || [])
+        .map((item: { group_name: string }) => item.group_name)
+        .sort();
       setAvailableGroups(uniqueGroups);
       console.log(`Fetched ${uniqueGroups.length} groups using RPC`);
     } catch (err) {
