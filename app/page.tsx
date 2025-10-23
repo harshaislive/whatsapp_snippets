@@ -43,7 +43,7 @@ export default function Home() {
         // If RPC fails, fall back to client-side approach with pagination
         console.warn("RPC call failed, using fallback method:", error);
 
-        let allGroups = new Set<string>();
+        const allGroups = new Set<string>();
         let page = 0;
         const pageSize = 1000;
         let hasMore = true;
