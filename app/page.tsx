@@ -31,26 +31,52 @@ export default function Home() {
   // Calculate total pages
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  // Fetch available groups
+  // Fetch available groups using a database function for efficiency
   const fetchGroups = useCallback(async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from("whatsapp_snippets")
-        .select("group_name")
-        .not("group_name", "is", null);
+      // Call the database function to get distinct group names
+      const { data, error } = await supabase.rpc("get_unique_group_names");
 
-      if (error) throw error;
+      if (error) {
+        // If RPC fails, fall back to client-side approach with pagination
+        console.warn("RPC call failed, using fallback method:", error);
 
-      const uniqueGroups = [
-        ...new Set(
-          data?.map((item) => item.group_name).filter(Boolean) as string[]
-        ),
-      ].sort();
+        let allGroups = new Set<string>();
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
 
+        while (hasMore) {
+          const { data: pageData, error: pageError } = await supabase
+            .from("whatsapp_snippets")
+            .select("group_name")
+            .not("group_name", "is", null)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+          if (pageError) throw pageError;
+
+          if (pageData && pageData.length > 0) {
+            pageData.forEach((item) => {
+              if (item.group_name) allGroups.add(item.group_name);
+            });
+            page++;
+            hasMore = pageData.length === pageSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        const uniqueGroups = Array.from(allGroups).sort();
+        setAvailableGroups(uniqueGroups);
+        console.log(`Fetched ${uniqueGroups.length} groups using fallback pagination`);
+        return;
+      }
+
+      const uniqueGroups = (data || []).sort();
       setAvailableGroups(uniqueGroups);
-      console.log(`Fetched ${uniqueGroups.length} groups`);
+      console.log(`Fetched ${uniqueGroups.length} groups using RPC`);
     } catch (err) {
       console.error("Error fetching groups:", err);
     }
