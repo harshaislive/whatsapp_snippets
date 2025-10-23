@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Search } from "lucide-react";
 import { format } from "date-fns";
 
 interface FilterBarProps {
@@ -23,9 +24,11 @@ interface FilterBarProps {
   endDate: Date | null;
   selectedGroup: string | null;
   availableGroups: string[];
+  searchQuery: string;
   onStartDateChange: (date: Date | null) => void;
   onEndDateChange: (date: Date | null) => void;
   onGroupChange: (group: string | null) => void;
+  onSearchChange: (query: string) => void;
 }
 
 type QuickFilter = "all" | "today" | "yesterday" | "last7" | "last30" | "custom";
@@ -35,9 +38,11 @@ export function FilterBar({
   endDate,
   selectedGroup,
   availableGroups,
+  searchQuery,
   onStartDateChange,
   onEndDateChange,
   onGroupChange,
+  onSearchChange,
 }: FilterBarProps) {
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("all");
 
@@ -192,6 +197,28 @@ export function FilterBar({
             </Select>
           </div>
         )}
+
+        {/* Search Input */}
+        <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-[400px]">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search messages, captions, or senders..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="flex-1"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onSearchChange("")}
+              className="h-8 px-2"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

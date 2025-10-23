@@ -27,6 +27,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Calculate total pages
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -103,6 +104,9 @@ export default function Home() {
       if (selectedGroup) {
         query = query.eq("group_name", selectedGroup);
       }
+      if (searchQuery) {
+        query = query.or(`content.ilike.%${searchQuery}%,caption.ilike.%${searchQuery}%,sender_name.ilike.%${searchQuery}%`);
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -111,7 +115,7 @@ export default function Home() {
     } catch (err) {
       console.error("Error fetching count:", err);
     }
-  }, [user, startDate, endDate, selectedGroup]);
+  }, [user, startDate, endDate, selectedGroup, searchQuery]);
 
   // Fetch snippets with filters and pagination
   const fetchSnippets = useCallback(async () => {
@@ -139,6 +143,9 @@ export default function Home() {
       if (selectedGroup) {
         query = query.eq("group_name", selectedGroup);
       }
+      if (searchQuery) {
+        query = query.or(`content.ilike.%${searchQuery}%,caption.ilike.%${searchQuery}%,sender_name.ilike.%${searchQuery}%`);
+      }
 
       const { data, error } = await query.returns<Snippet[]>();
       if (error) throw error;
@@ -156,7 +163,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [user, currentPage, startDate, endDate, selectedGroup]);
+  }, [user, currentPage, startDate, endDate, selectedGroup, searchQuery]);
 
   // Setup realtime subscription
   useEffect(() => {
@@ -212,7 +219,7 @@ export default function Home() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [startDate, endDate, selectedGroup]);
+  }, [startDate, endDate, selectedGroup, searchQuery]);
 
   // Group snippets by date
   const groupedSnippets = snippets.reduce((groups, snippet) => {
@@ -256,9 +263,11 @@ export default function Home() {
         endDate={endDate}
         selectedGroup={selectedGroup}
         availableGroups={availableGroups}
+        searchQuery={searchQuery}
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
         onGroupChange={setSelectedGroup}
+        onSearchChange={setSearchQuery}
       />
 
       {error && (
